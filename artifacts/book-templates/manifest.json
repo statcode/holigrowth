@@ -1,0 +1,712 @@
+{
+  "$comment": "Single source of truth for the template-based PDF render pipeline. Human-readable companion lives in README.md — keep them in sync. The pipeline at artifacts/api-server/src/routes/zodiac-orders/pdfGenerator.ts should load this file at render time.",
+  "version": 1,
+  "spec": {
+    "trim": {
+      "widthIn": 6,
+      "heightIn": 9
+    },
+    "page": {
+      "widthIn": 6.25,
+      "heightIn": 9.25,
+      "widthPt": 450,
+      "heightPt": 666
+    },
+    "bleedIn": 0.125,
+    "safeMarginIn": 0.625,
+    "luluPodPackage": "0600X0900FCSTDHC060CW444GXX"
+  },
+  "pageTypes": {
+    "chapter-opener": {
+      "file": "01-chapter-opener.pdf",
+      "purpose": "First page of a new chapter",
+      "facing": "recto",
+      "placeholders": [
+        "CH_NUM",
+        "CHAPTER_TITLE",
+        "CHAPTER_SUBTITLE"
+      ],
+      "slots": {
+        "CH_NUM": {
+          "x": 252.7,
+          "y": 373.5,
+          "w": 51.16,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d0_f2"
+        },
+        "CHAPTER_TITLE": {
+          "x": 184.93,
+          "y": 328.5,
+          "w": 86.97,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d0_f2"
+        },
+        "CHAPTER_SUBTITLE": {
+          "x": 177.26,
+          "y": 298.5,
+          "w": 102.32,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d0_f3"
+        }
+      }
+    },
+    "standard-body": {
+      "file": "02-standard-body.pdf",
+      "purpose": "Default workhorse text page",
+      "facing": "verso",
+      "placeholders": [
+        "CHAPTER_TITLE",
+        "LEAD_PARAGRAPH",
+        "SUBSECTION_HEADING",
+        "BODY_PARAGRAPH",
+        "READER_FIRST_NAME",
+        "BULLET_1",
+        "BULLET_2",
+        "BULLET_3"
+      ],
+      "$note": "SUBSECTION_HEADING appears twice in the source PDF — the renderer should fill the first two `## ` subsections of the chapter.",
+      "slots": {
+        "CHAPTER_TITLE": {
+          "x": 310.68,
+          "y": 615,
+          "w": 86.97,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f1"
+        },
+        "LEAD_PARAGRAPH": {
+          "x": 45.5,
+          "y": 570,
+          "w": 92.09,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f2"
+        },
+        "SUBSECTION_HEADING": [
+          {
+            "x": 58.79,
+            "y": 493.5,
+            "w": 112.55,
+            "h": 8.5,
+            "fontSize": 8.5,
+            "fontName": "g_d1_f2"
+          },
+          {
+            "x": 58.79,
+            "y": 314.25,
+            "w": 112.55,
+            "h": 8.5,
+            "fontSize": 8.5,
+            "fontName": "g_d1_f2"
+          }
+        ],
+        "BODY_PARAGRAPH": {
+          "x": 45.5,
+          "y": 468.75,
+          "w": 92.09,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f1"
+        },
+        "READER_FIRST_NAME": {
+          "x": 45.5,
+          "y": 615,
+          "w": 107.43,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f1"
+        },
+        "BULLET_1": {
+          "x": 63.5,
+          "y": 289.5,
+          "w": 61.39,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f1"
+        },
+        "BULLET_2": {
+          "x": 63.5,
+          "y": 267.75,
+          "w": 61.39,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f1"
+        },
+        "BULLET_3": {
+          "x": 63.5,
+          "y": 246,
+          "w": 61.39,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d1_f1"
+        }
+      }
+    },
+    "standard-body-with-quotes": {
+      "file": "03-standard-body-with-quotes.pdf",
+      "purpose": "Body page that highlights one key line",
+      "facing": "recto",
+      "placeholders": [
+        "READER_FIRST_NAME",
+        "SUBSECTION_HEADING",
+        "BODY_PARAGRAPH",
+        "CHAPTER_TITLE",
+        "PULL_QUOTE"
+      ],
+      "slots": {
+        "READER_FIRST_NAME": {
+          "x": 52.35,
+          "y": 615,
+          "w": 107.43,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d2_f1"
+        },
+        "SUBSECTION_HEADING": {
+          "x": 65.64,
+          "y": 567.75,
+          "w": 112.55,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d2_f4"
+        },
+        "BODY_PARAGRAPH": {
+          "x": 52.35,
+          "y": 543,
+          "w": 92.09,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d2_f1"
+        },
+        "CHAPTER_TITLE": {
+          "x": 317.52,
+          "y": 615,
+          "w": 86.97,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d2_f1"
+        },
+        "PULL_QUOTE": {
+          "x": 73.85,
+          "y": 414.75,
+          "w": 71.62,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d2_f4"
+        }
+      }
+    },
+    "data-numerology": {
+      "file": "04-data-numerology.pdf",
+      "purpose": "Numerology / astrology stats card",
+      "facing": "verso",
+      "placeholders": [
+        "CHAPTER_TITLE",
+        "INTERPRETATION_BODY",
+        "READER_FIRST_NAME",
+        "NUMBER",
+        "ARCHETYPE_NAME",
+        "CALCULATION",
+        "ELEMENT",
+        "KEYWORDS",
+        "SHADOW",
+        "SIGN",
+        "HOUSE"
+      ],
+      "slots": {
+        "CHAPTER_TITLE": {
+          "x": 310.68,
+          "y": 615,
+          "w": 86.97,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "INTERPRETATION_BODY": {
+          "x": 45.5,
+          "y": 303,
+          "w": 117.67,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "READER_FIRST_NAME": {
+          "x": 45.5,
+          "y": 615,
+          "w": 107.43,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "NUMBER": {
+          "x": 66.25,
+          "y": 498.75,
+          "w": 51.16,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "ARCHETYPE_NAME": {
+          "x": 134.91,
+          "y": 498.75,
+          "w": 92.09,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f8"
+        },
+        "CALCULATION": {
+          "x": 234.33,
+          "y": 462.75,
+          "w": 76.74,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "ELEMENT": {
+          "x": 234.33,
+          "y": 443.25,
+          "w": 56.28,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "KEYWORDS": {
+          "x": 234.33,
+          "y": 423.75,
+          "w": 61.39,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "SHADOW": {
+          "x": 234.33,
+          "y": 404.25,
+          "w": 51.16,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f1"
+        },
+        "SIGN": {
+          "x": 108.49,
+          "y": 186.75,
+          "w": 40.93,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f8"
+        },
+        "HOUSE": {
+          "x": 166.28,
+          "y": 186.75,
+          "w": 46.04,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d3_f8"
+        }
+      }
+    },
+    "affirmations": {
+      "file": "05-affirmations.pdf",
+      "purpose": "Single focal affirmation page",
+      "facing": "either",
+      "placeholders": [
+        "AFFIRMATION_TEXT",
+        "READER_FIRST_NAME",
+        "PLACEMENT_REFERENCE",
+        "CHAPTER_TITLE"
+      ],
+      "slots": {
+        "AFFIRMATION_TEXT": {
+          "x": 177.26,
+          "y": 305.25,
+          "w": 102.32,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d4_f4"
+        },
+        "READER_FIRST_NAME": {
+          "x": 116.47,
+          "y": 266.25,
+          "w": 107.43,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d4_f7"
+        },
+        "PLACEMENT_REFERENCE": {
+          "x": 240.08,
+          "y": 266.25,
+          "w": 117.67,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d4_f7"
+        },
+        "CHAPTER_TITLE": {
+          "x": 317.52,
+          "y": 615,
+          "w": 86.97,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d4_f4"
+        }
+      }
+    },
+    "section-divider": {
+      "file": "06-section-divider.pdf",
+      "purpose": "Between major parts of the book — full-bleed art",
+      "facing": "either",
+      "placeholders": [
+        "PART_NUM",
+        "PART_TITLE",
+        "READER_FIRST_NAME",
+        "PART_TAGLINE"
+      ],
+      "slots": {
+        "PART_NUM": [
+          {
+            "x": 86.52,
+            "y": 615,
+            "w": 61.39,
+            "h": 8.5,
+            "fontSize": 8.5,
+            "fontName": "g_d5_f2"
+          },
+          {
+            "x": 219.2,
+            "y": 447.75,
+            "w": 61.39,
+            "h": 8.5,
+            "fontSize": 8.5,
+            "fontName": "g_d5_f2"
+          }
+        ],
+        "PART_TITLE": {
+          "x": 192.61,
+          "y": 258.75,
+          "w": 71.62,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d5_f2"
+        },
+        "READER_FIRST_NAME": {
+          "x": 297.06,
+          "y": 615,
+          "w": 107.43,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d5_f2"
+        },
+        "PART_TAGLINE": {
+          "x": 187.49,
+          "y": 222,
+          "w": 81.85,
+          "h": 8.5,
+          "fontSize": 8.5,
+          "fontName": "g_d5_f4"
+        }
+      }
+    }
+  },
+  "zodiacSigns": {
+    "Aries": "zodiac-name-aries.pdf",
+    "Taurus": "zodiac-name-taurus.pdf",
+    "Gemini": "zodiac-name-gemini.pdf",
+    "Cancer": "zodiac-name-cancer.pdf",
+    "Leo": "zodiac-name-leo.pdf",
+    "Virgo": "zodiac-name-virgo.pdf",
+    "Libra": "zodiac-name-libra.pdf",
+    "Scorpio": "zodiac-name-scorpio.pdf",
+    "Sagittarius": "zodiac-name-sagittarius.pdf",
+    "Capricorn": "zodiac-name-capricorn.pdf",
+    "Aquarius": "zodiac-name-aquarius.pdf",
+    "Pisces": "zodiac-name-pisces.pdf"
+  },
+  "placeholders": {
+    "READER_FIRST_NAME": {
+      "type": "text",
+      "source": "First whitespace-split token of order.fullName"
+    },
+    "CH_NUM": {
+      "type": "text",
+      "source": "Chapter number, two-digit (e.g. \"01\", \"12\")"
+    },
+    "CHAPTER_TITLE": {
+      "type": "text",
+      "source": "Heading after `# Chapter N:` from generated markdown — strip the `Chapter N:` prefix"
+    },
+    "CHAPTER_SUBTITLE": {
+      "type": "text",
+      "source": "Em-dash-separated tail of the heading, or hand-curated per chapter"
+    },
+    "LEAD_PARAGRAPH": {
+      "type": "paragraph",
+      "source": "First paragraph of the chapter body"
+    },
+    "SUBSECTION_HEADING": {
+      "type": "text",
+      "source": "Each `## ` heading in the chapter, in order"
+    },
+    "BODY_PARAGRAPH": {
+      "type": "multi-paragraph",
+      "source": "Chapter body prose, flowed across one or more standard-body pages"
+    },
+    "BULLET_1": {
+      "type": "text",
+      "source": "Short summary line — synthesized or extracted from `## ` opener"
+    },
+    "BULLET_2": {
+      "type": "text",
+      "source": "Short summary line"
+    },
+    "BULLET_3": {
+      "type": "text",
+      "source": "Short summary line"
+    },
+    "PULL_QUOTE": {
+      "type": "text",
+      "source": "One striking sentence from the chapter — first markdown blockquote, else heuristically chosen"
+    },
+    "AFFIRMATION_TEXT": {
+      "type": "text",
+      "source": "One affirmation. Pillar chapters: signature line from `## Your 10 [Pillar] Affirmations`. Chapter 10: each Morning/Midday/Evening mantra"
+    },
+    "PLACEMENT_REFERENCE": {
+      "type": "text",
+      "source": "Astrological context, e.g. `Venus in Libra` or `Life Path 7`"
+    },
+    "INTERPRETATION_BODY": {
+      "type": "paragraph",
+      "source": "Plain-language interpretation of the data card"
+    },
+    "NUMBER": {
+      "type": "text",
+      "source": "Numerology value (e.g. `7`)"
+    },
+    "ARCHETYPE_NAME": {
+      "type": "text",
+      "source": "Numerology archetype label (e.g. `The Seeker`)"
+    },
+    "CALCULATION": {
+      "type": "text",
+      "source": "One-line breakdown of how the number was derived"
+    },
+    "ELEMENT": {
+      "type": "text",
+      "source": "Astrological element (Fire / Earth / Air / Water)"
+    },
+    "KEYWORDS": {
+      "type": "text",
+      "source": "Comma-separated keywords, ≤4"
+    },
+    "SHADOW": {
+      "type": "text",
+      "source": "Short shadow-pattern description"
+    },
+    "SIGN": {
+      "type": "text",
+      "source": "Zodiac sign name"
+    },
+    "HOUSE": {
+      "type": "text",
+      "source": "House placement (e.g. `5th House`)"
+    },
+    "PART_NUM": {
+      "type": "text",
+      "source": "Roman numeral for the part (`I`, `II`, `III`)"
+    },
+    "PART_TITLE": {
+      "type": "text",
+      "source": "Part name (`Foundations`, `Three Pillars`, `Practice`)"
+    },
+    "PART_TAGLINE": {
+      "type": "text",
+      "source": "One-line tagline for the divider page"
+    }
+  },
+  "chapterRecipes": [
+    {
+      "section": "welcome",
+      "title": "Disclaimer & Welcome Letter",
+      "templates": [
+        "standard-body"
+      ]
+    },
+    {
+      "section": "part",
+      "partNum": "I",
+      "partTitle": "Foundations",
+      "partTagline": "Where your story is written in the stars",
+      "templates": [
+        "section-divider"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 1,
+      "title": "Your Holistic Growth Life Path — The Overview",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 2,
+      "title": "Your Sun Sign",
+      "$note": "Sun-sign template chosen at render time from order.sunSign via zodiacSigns lookup.",
+      "templates": [
+        "chapter-opener",
+        "zodiac-sign",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 3,
+      "title": "Your Moon Sign",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 4,
+      "title": "Your Rising Sign",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "part",
+      "partNum": "II",
+      "partTitle": "Three Pillars",
+      "partTagline": "Love, abundance, and the body that carries you",
+      "templates": [
+        "section-divider"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 5,
+      "title": "Relationships — Love, Partnership & Soul Contracts",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes",
+        "affirmations"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 6,
+      "title": "Wealth — Abundance, Career & Life Mission",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes",
+        "affirmations"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 7,
+      "title": "Health — Vitality, Body Wisdom & Energetic Wellbeing",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes",
+        "affirmations"
+      ]
+    },
+    {
+      "section": "part",
+      "partNum": "III",
+      "partTitle": "Practice",
+      "partTagline": "Numbers, timing, and the rhythms of your day",
+      "templates": [
+        "section-divider"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 8,
+      "title": "Your Numerological Fortune — Lucky Numbers & Timing",
+      "templates": [
+        "chapter-opener",
+        "data-numerology",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 9,
+      "title": "Planetary Influences & Cosmic Timing",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 10,
+      "title": "Your Daily Mantras",
+      "templates": [
+        "chapter-opener",
+        "affirmations",
+        "affirmations",
+        "affirmations"
+      ],
+      "$note": "Three affirmations pages: Morning, Midday, Evening — one mantra featured each."
+    },
+    {
+      "section": "chapter",
+      "chapter": 11,
+      "title": "Your Sacred Morning Ritual",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 12,
+      "title": "Your Year Ahead — Month by Month Guidance",
+      "templates": [
+        "chapter-opener",
+        "standard-body+",
+        "data-numerology",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "closing",
+      "title": "A Love Letter from the Universe",
+      "templates": [
+        "standard-body-with-quotes"
+      ]
+    }
+  ],
+  "$recipeSyntax": {
+    "standard-body+": "One or more standard-body pages — repeat as needed to fit chapter prose. Pipeline measures and breaks.",
+    "zodiac-sign": "Resolved at render time via zodiacSigns[order.sunSign]."
+  },
+  "implementationStatus": {
+    "templatesUploaded": true,
+    "placeholderVocabulary": true,
+    "chapterRecipe": true,
+    "markdownParsingRules": true,
+    "coordinateExtraction": false,
+    "renderPipeline": false,
+    "$next": "Add per-template `slots` blocks giving the bounding box (x, y, width, height) of each placeholder. Recommended approach: one-shot extractor using pdfjs-dist's getTextContent transform matrices."
+  }
+}

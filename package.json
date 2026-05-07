@@ -1,0 +1,24 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "start:back": "pnpm --filter @workspace/api-server run dev",
+    "start:front": "pnpm --filter @workspace/zodiac-book run dev",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "build:back": "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run build",
+    "build:front": "pnpm run typecheck:libs && pnpm --filter @workspace/zodiac-book run build && rm -rf dist && cp -R artifacts/zodiac-book/dist/public dist",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+  },
+  "private": true,
+  "devDependencies": {
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  },
+  "dependencies": {
+    "stripe": "^22.1.0",
+    "stripe-replit-sync": "^1.0.0"
+  }
+}

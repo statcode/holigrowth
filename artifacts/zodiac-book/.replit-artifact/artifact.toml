@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Zodiac Book"
+version = "1.0.0"
+id = "artifacts/zodiac-book"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25965
+
+[services.development]
+run = "pnpm --filter @workspace/zodiac-book run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/zodiac-book", "run", "build" ]
+publicDir = "artifacts/zodiac-book/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25965"
+BASE_PATH = "/"

@@ -1,0 +1,518 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Personalized Zodiac Book API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: zodiac-orders
+    description: Zodiac book order operations
+  - name: admin
+    description: Admin-only operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /zodiac-orders:
+    get:
+      operationId: listZodiacOrders
+      tags: [zodiac-orders]
+      summary: List all zodiac orders
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ZodiacOrder"
+    post:
+      operationId: createZodiacOrder
+      tags: [zodiac-orders]
+      summary: Create a new personalized zodiac book order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateZodiacOrderBody"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodiacOrder"
+        "400":
+          description: Invalid input
+
+  /zodiac-orders/{id}:
+    get:
+      operationId: getZodiacOrder
+      tags: [zodiac-orders]
+      summary: Get a zodiac order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodiacOrder"
+        "404":
+          description: Order not found
+
+  /zodiac-orders/{id}/generate:
+    post:
+      operationId: generateZodiacContent
+      tags: [zodiac-orders]
+      summary: Trigger AI content generation for an order (SSE streaming)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SSE stream of generated content
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          description: Order not found
+        "409":
+          description: Content already generated
+
+  /zodiac-orders/{id}/submit-to-lulu:
+    post:
+      operationId: submitToLulu
+      tags: [zodiac-orders]
+      summary: Submit the generated book to Lulu for printing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitToLuluBody"
+      responses:
+        "200":
+          description: Submitted to Lulu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodiacOrder"
+        "400":
+          description: Content not generated yet or invalid
+        "404":
+          description: Order not found
+
+  /referrals/{code}:
+    get:
+      operationId: getReferral
+      tags: [zodiac-orders]
+      summary: Look up a referral code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Referral info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralInfo"
+        "404":
+          description: Code not found
+
+  /stripe/create-checkout-session:
+    post:
+      operationId: createCheckoutSession
+      tags: [zodiac-orders]
+      summary: Create a Stripe Checkout session for an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionBody"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "400":
+          description: Invalid input
+        "404":
+          description: Order not found
+
+  /zodiac-orders/stats/summary:
+    get:
+      operationId: getOrderStats
+      tags: [zodiac-orders]
+      summary: Get stats summary for all orders
+      responses:
+        "200":
+          description: Order statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStats"
+
+  /settings:
+    get:
+      operationId: getSiteSettings
+      tags: [zodiac-orders]
+      summary: Get site-wide settings (price, cover image)
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+    put:
+      operationId: updateSiteSettings
+      tags: [zodiac-orders]
+      summary: Update site-wide settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSiteSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ZodiacOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        birthday:
+          type: string
+        birthTime:
+          type: string
+        birthLocation:
+          type: string
+        email:
+          type: ["string", "null"]
+        intention:
+          type: ["string", "null"]
+          enum: [gift, myself, null]
+        gender:
+          type: ["string", "null"]
+          enum: [male, female, null]
+        sexualOrientation:
+          type: ["string", "null"]
+          enum: [straight, gay, bisexual, prefer_not_to_say, null]
+        relationshipStatus:
+          type: ["string", "null"]
+          enum: [single, in_relationship, married, divorced, widowed, not_seeking, null]
+        status:
+          type: string
+          enum: [pending_payment, pending, generating, generated, submitting, processing, shipped, failed]
+        generatedContent:
+          type: ["string", "null"]
+        sunSign:
+          type: ["string", "null"]
+        moonSign:
+          type: ["string", "null"]
+        risingSign:
+          type: ["string", "null"]
+        lifePath:
+          type: ["string", "null"]
+        customAffirmations:
+          type: ["string", "null"]
+        luckyNumbers:
+          type: ["string", "null"]
+        referralCode:
+          type: ["string", "null"]
+        referredBy:
+          type: ["string", "null"]
+        referralCount:
+          type: integer
+        luluOrderId:
+          type: ["string", "null"]
+        luluStatus:
+          type: ["string", "null"]
+        shippingAddress:
+          type: ["string", "null"]
+        priceUsd:
+          type: ["number", "null"]
+        stripeSessionId:
+          type: ["string", "null"]
+        stripePaymentIntentId:
+          type: ["string", "null"]
+        interiorPdfUrl:
+          type: ["string", "null"]
+        coverPdfUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - fullName
+        - birthday
+        - birthTime
+        - birthLocation
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateZodiacOrderBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        birthday:
+          type: string
+          description: ISO date string (YYYY-MM-DD)
+        birthTime:
+          type: string
+          description: Time of birth (HH:MM)
+        birthLocation:
+          type: string
+          description: City, Country
+        email:
+          type: string
+        intention:
+          type: string
+          enum: [gift, myself]
+          description: Who this book is for — a gift for someone else, or for oneself
+        gender:
+          type: string
+          enum: [male, female]
+        sexualOrientation:
+          type: string
+          enum: [straight, gay, bisexual, prefer_not_to_say]
+          description: Sexual orientation — shapes the Relationships chapter
+        relationshipStatus:
+          type: string
+          enum: [single, in_relationship, married, divorced, widowed, not_seeking]
+          description: Current relationship status — shapes the Relationships chapter
+        customAffirmations:
+          type: string
+          description: Personal affirmations and mantras to weave into the book
+        referredBy:
+          type: string
+          description: Referral code used by the person who referred this customer
+        marketingOptIn:
+          type: boolean
+          description: Whether the user consented to receive marketing emails
+      required:
+        - fullName
+        - birthday
+        - birthTime
+        - birthLocation
+
+    SubmitToLuluBody:
+      type: object
+      properties:
+        shippingName:
+          type: string
+        shippingAddress1:
+          type: string
+        shippingAddress2:
+          type: string
+        shippingCity:
+          type: string
+        shippingState:
+          type: string
+        shippingZip:
+          type: string
+        shippingCountry:
+          type: string
+        email:
+          type: string
+      required:
+        - shippingName
+        - shippingAddress1
+        - shippingCity
+        - shippingState
+        - shippingZip
+        - shippingCountry
+        - email
+
+    OrderStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        generating:
+          type: integer
+        generated:
+          type: integer
+        shipped:
+          type: integer
+        recentOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/ZodiacOrder"
+      required:
+        - total
+        - pending
+        - generating
+        - generated
+        - shipped
+
+    CreateCheckoutSessionBody:
+      type: object
+      properties:
+        orderId:
+          type: integer
+      required:
+        - orderId
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
+
+    ReferralInfo:
+      type: object
+      properties:
+        code:
+          type: string
+        referrerName:
+          type: string
+        discountPercent:
+          type: integer
+        timesUsed:
+          type: integer
+        sunSign:
+          type: string
+          nullable: true
+        moonSign:
+          type: string
+          nullable: true
+        risingSign:
+          type: string
+          nullable: true
+        lifePath:
+          type: string
+          nullable: true
+        luckyNumbers:
+          type: string
+          nullable: true
+      required:
+        - code
+        - referrerName
+        - discountPercent
+        - timesUsed
+
+    SiteSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        priceUsd:
+          type: number
+        originalPriceUsd:
+          type: number
+        coverImageUrl:
+          type: ["string", "null"]
+        testEmailOverride:
+          type: ["string", "null"]
+          description: When set, all transactional emails are also sent to this address
+        emailConfirmSubject:
+          type: ["string", "null"]
+        emailConfirmIntro:
+          type: ["string", "null"]
+        emailBookReadySubject:
+          type: ["string", "null"]
+        emailBookReadyIntro:
+          type: ["string", "null"]
+        emailStuckSubject:
+          type: ["string", "null"]
+        emailStuckIntro:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+      required:
+        - id
+        - priceUsd
+        - originalPriceUsd
+        - updatedAt
+
+    UpdateSiteSettingsBody:
+      type: object
+      properties:
+        priceUsd:
+          type: number
+        originalPriceUsd:
+          type: number
+        coverImageUrl:
+          type: ["string", "null"]
+        testEmailOverride:
+          type: ["string", "null"]
+        emailConfirmSubject:
+          type: ["string", "null"]
+        emailConfirmIntro:
+          type: ["string", "null"]
+        emailBookReadySubject:
+          type: ["string", "null"]
+        emailBookReadyIntro:
+          type: ["string", "null"]
+        emailStuckSubject:
+          type: ["string", "null"]
+        emailStuckIntro:
+          type: ["string", "null"]
