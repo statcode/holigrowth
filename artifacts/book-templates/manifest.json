@@ -18,7 +18,7 @@
   },
   "pageTypes": {
     "chapter-opener": {
-      "file": "01-chapter-opener.pdf",
+      "file": "01-chapter-opener-editable.pdf",
       "purpose": "First page of a new chapter",
       "facing": "recto",
       "placeholders": [
@@ -28,33 +28,41 @@
       ],
       "slots": {
         "CH_NUM": {
-          "x": 252.7,
-          "y": 373.5,
-          "w": 51.16,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d0_f2"
+          "x": 252,
+          "y": 374,
+          "w": 58,
+          "h": 15,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "CHAPTER_TITLE": {
-          "x": 184.93,
-          "y": 328.5,
-          "w": 86.97,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d0_f2"
+          "x": 109,
+          "y": 339,
+          "w": 241,
+          "h": 28,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "CHAPTER_SUBTITLE": {
-          "x": 177.26,
-          "y": 298.5,
-          "w": 102.32,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d0_f3"
+          "x": 169,
+          "y": 300,
+          "w": 123,
+          "h": 15,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 190,
+          "y": 45,
+          "w": 78,
+          "h": 13,
+          "fontSize": 11,
+          "fontName": "acro-field"
         }
       }
     },
     "standard-body": {
-      "file": "02-standard-body.pdf",
+      "file": "02-standard-body-editable.pdf",
       "purpose": "Default workhorse text page",
       "facing": "verso",
       "placeholders": [
@@ -69,84 +77,110 @@
       ],
       "$note": "SUBSECTION_HEADING appears twice in the source PDF — the renderer should fill the first two `## ` subsections of the chapter.",
       "slots": {
+        "READER_FIRST_NAME": {
+          "x": 42,
+          "y": 617,
+          "w": 146,
+          "h": 15,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
         "CHAPTER_TITLE": {
-          "x": 310.68,
-          "y": 615,
-          "w": 86.97,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f1"
+          "x": 238,
+          "y": 617,
+          "w": 162,
+          "h": 15,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "LEAD_PARAGRAPH": {
-          "x": 45.5,
-          "y": 570,
-          "w": 92.09,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f2"
+          "x": 40,
+          "y": 582,
+          "w": 300,
+          "h": 50,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BULLET_1": {
+          "x": 42,
+          "y": 260,
+          "w": 358,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BULLET_2": {
+          "x": 42,
+          "y": 243,
+          "w": 358,
+          "h": 13,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BULLET_3": {
+          "x": 42,
+          "y": 225,
+          "w": 358,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 185,
+          "y": 40,
+          "w": 80,
+          "h": 18,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "SUBSECTION_HEADING": [
           {
-            "x": 58.79,
-            "y": 493.5,
-            "w": 112.55,
-            "h": 8.5,
-            "fontSize": 8.5,
-            "fontName": "g_d1_f2"
+            "x": 40,
+            "y": 522,
+            "w": 198,
+            "h": 18,
+            "fontSize": 11,
+            "fontName": "acro-field"
           },
           {
-            "x": 58.79,
-            "y": 314.25,
-            "w": 112.55,
-            "h": 8.5,
-            "fontSize": 8.5,
-            "fontName": "g_d1_f2"
+            "x": 40,
+            "y": 284,
+            "w": 198,
+            "h": 18,
+            "fontSize": 11,
+            "fontName": "acro-field"
           }
         ],
-        "BODY_PARAGRAPH": {
-          "x": 45.5,
-          "y": 468.75,
-          "w": 92.09,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f1"
-        },
-        "READER_FIRST_NAME": {
-          "x": 45.5,
-          "y": 615,
-          "w": 107.43,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f1"
-        },
-        "BULLET_1": {
-          "x": 63.5,
-          "y": 289.5,
-          "w": 61.39,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f1"
-        },
-        "BULLET_2": {
-          "x": 63.5,
-          "y": 267.75,
-          "w": 61.39,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f1"
-        },
-        "BULLET_3": {
-          "x": 63.5,
-          "y": 246,
-          "w": 61.39,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d1_f1"
-        }
+        "BODY_PARAGRAPH": [
+          {
+            "x": 40,
+            "y": 494,
+            "w": 300,
+            "h": 95,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 54,
+            "y": 389,
+            "w": 286,
+            "h": 95,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 40,
+            "y": 199,
+            "w": 300,
+            "h": 80,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ]
       }
     },
     "standard-body-with-quotes": {
-      "file": "03-standard-body-with-quotes.pdf",
+      "file": "03-standard-body-with-quotes-editable.pdf",
       "purpose": "Body page that highlights one key line",
       "facing": "recto",
       "placeholders": [
@@ -158,49 +192,83 @@
       ],
       "slots": {
         "READER_FIRST_NAME": {
-          "x": 52.35,
-          "y": 615,
-          "w": 107.43,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d2_f1"
-        },
-        "SUBSECTION_HEADING": {
-          "x": 65.64,
-          "y": 567.75,
-          "w": 112.55,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d2_f4"
-        },
-        "BODY_PARAGRAPH": {
-          "x": 52.35,
-          "y": 543,
-          "w": 92.09,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d2_f1"
+          "x": 47,
+          "y": 617,
+          "w": 143,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "CHAPTER_TITLE": {
-          "x": 317.52,
-          "y": 615,
-          "w": 86.97,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d2_f1"
+          "x": 268,
+          "y": 617,
+          "w": 138,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "SUBSECTION_HEADING": {
+          "x": 47,
+          "y": 570,
+          "w": 206,
+          "h": 17,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "PULL_QUOTE": {
-          "x": 73.85,
-          "y": 414.75,
-          "w": 71.62,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d2_f4"
-        }
+          "x": 185,
+          "y": 470,
+          "w": 90,
+          "h": 16,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 84,
+          "y": 44,
+          "w": 287,
+          "h": 13,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BODY_PARAGRAPH": [
+          {
+            "x": 47,
+            "y": 545,
+            "w": 363,
+            "h": 14,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 61,
+            "y": 518,
+            "w": 349,
+            "h": 14,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 47,
+            "y": 425,
+            "w": 363,
+            "h": 13,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 61,
+            "y": 398,
+            "w": 349,
+            "h": 13,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ]
       }
     },
     "data-numerology": {
-      "file": "04-data-numerology.pdf",
+      "file": "04-data-numerology-editable.pdf",
       "purpose": "Numerology / astrology stats card",
       "facing": "verso",
       "placeholders": [
@@ -217,98 +285,144 @@
         "HOUSE"
       ],
       "slots": {
-        "CHAPTER_TITLE": {
-          "x": 310.68,
-          "y": 615,
-          "w": 86.97,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
-        },
-        "INTERPRETATION_BODY": {
-          "x": 45.5,
-          "y": 303,
-          "w": 117.67,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
-        },
         "READER_FIRST_NAME": {
-          "x": 45.5,
-          "y": 615,
-          "w": 107.43,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
+          "x": 40,
+          "y": 617,
+          "w": 150,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "CHAPTER_TITLE": {
+          "x": 234,
+          "y": 617,
+          "w": 166,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "NUMBER": {
-          "x": 66.25,
-          "y": 498.75,
-          "w": 51.16,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
+          "x": 63,
+          "y": 520,
+          "w": 144,
+          "h": 43,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "ARCHETYPE_NAME": {
-          "x": 134.91,
-          "y": 498.75,
-          "w": 92.09,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f8"
+          "x": 43,
+          "y": 352,
+          "w": 138,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "CALCULATION": {
-          "x": 234.33,
-          "y": 462.75,
-          "w": 76.74,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
-        },
-        "ELEMENT": {
-          "x": 234.33,
-          "y": 443.25,
-          "w": 56.28,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
-        },
-        "KEYWORDS": {
-          "x": 234.33,
-          "y": 423.75,
-          "w": 61.39,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
+          "x": 232,
+          "y": 461,
+          "w": 86,
+          "h": 8,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "SHADOW": {
-          "x": 234.33,
-          "y": 404.25,
-          "w": 51.16,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f1"
+          "x": 232,
+          "y": 403,
+          "w": 58,
+          "h": 8,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "SIGN_GLYPH": {
+          "x": 67,
+          "y": 249,
+          "w": 210,
+          "h": 28,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "SIGN": {
-          "x": 108.49,
-          "y": 186.75,
-          "w": 40.93,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f8"
+          "x": 232,
+          "y": 205,
+          "w": 70,
+          "h": 11,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "HOUSE": {
-          "x": 166.28,
-          "y": 186.75,
-          "w": 46.04,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d3_f8"
-        }
+          "x": 232,
+          "y": 186,
+          "w": 58,
+          "h": 11,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 78,
+          "y": 43,
+          "w": 288,
+          "h": 15,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "ELEMENT": [
+          {
+            "x": 232,
+            "y": 441,
+            "w": 58,
+            "h": 8,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 232,
+            "y": 167,
+            "w": 70,
+            "h": 11,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ],
+        "KEYWORDS": [
+          {
+            "x": 232,
+            "y": 422,
+            "w": 69,
+            "h": 8,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 232,
+            "y": 148,
+            "w": 69,
+            "h": 11,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ],
+        "INTERPRETATION_BODY": [
+          {
+            "x": 40,
+            "y": 350,
+            "w": 160,
+            "h": 18,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 40,
+            "y": 318,
+            "w": 160,
+            "h": 15,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ]
       }
     },
     "affirmations": {
-      "file": "05-affirmations.pdf",
+      "file": "05-affirmations-editable.pdf",
       "purpose": "Single focal affirmation page",
       "facing": "either",
       "placeholders": [
@@ -318,42 +432,301 @@
         "CHAPTER_TITLE"
       ],
       "slots": {
+        "CHAPTER_TITLE": {
+          "x": 236,
+          "y": 617,
+          "w": 170,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
         "AFFIRMATION_TEXT": {
-          "x": 177.26,
-          "y": 305.25,
-          "w": 102.32,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d4_f4"
+          "x": 108,
+          "y": 482,
+          "w": 240,
+          "h": 28,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "READER_FIRST_NAME": {
-          "x": 116.47,
-          "y": 266.25,
-          "w": 107.43,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d4_f7"
+          "x": 85,
+          "y": 435,
+          "w": 135,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "PLACEMENT_REFERENCE": {
-          "x": 240.08,
-          "y": 266.25,
-          "w": 117.67,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d4_f7"
+          "x": 225,
+          "y": 435,
+          "w": 146,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 84,
+          "y": 44,
+          "w": 287,
+          "h": 13,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
+    },
+    "welcome-letter": {
+      "file": "welcome-letter-editable.pdf",
+      "purpose": "Opening letter from Holistic Growth — sits at the very front of the book before Chapter 1",
+      "facing": "recto",
+      "placeholders": [
+        "READER_FIRST_NAME",
+        "WELCOME_BODY_PARAGRAPH_1",
+        "WELCOME_BODY_PARAGRAPH_2",
+        "WELCOME_SIGNOFF_LINE",
+        "WELCOME_SIGNATURE",
+        "WELCOME_FOOTER",
+        "DISCLAIMER_TEXT"
+      ],
+      "slots": {
+        "READER_FIRST_NAME": {
+          "x": 95,
+          "y": 370,
+          "w": 205,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "WELCOME_BODY_PARAGRAPH_1": {
+          "x": 54,
+          "y": 344,
+          "w": 351,
+          "h": 80,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "WELCOME_BODY_PARAGRAPH_2": {
+          "x": 54,
+          "y": 259,
+          "w": 351,
+          "h": 95,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "DISCLAIMER_TEXT": {
+          "x": 54,
+          "y": 161,
+          "w": 351,
+          "h": 52,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "WELCOME_SIGNOFF_LINE": {
+          "x": 54,
+          "y": 110,
+          "w": 181,
+          "h": 12,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "WELCOME_SIGNATURE": {
+          "x": 54,
+          "y": 95,
+          "w": 171,
+          "h": 12,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "WELCOME_FOOTER": {
+          "x": 148,
+          "y": 48,
+          "w": 164,
+          "h": 16,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
+    },
+    "closing-letter": {
+      "file": "closing-letter-editable.pdf",
+      "purpose": "Closing love letter from the Universe — final page of the book",
+      "facing": "recto",
+      "placeholders": [
+        "READER_FIRST_NAME",
+        "SUN_SIGN",
+        "MOON_SIGN",
+        "RISING_SIGN",
+        "LIFE_PATH",
+        "PERSONAL_YEAR",
+        "CLOSING_BODY_PARAGRAPH_1",
+        "CLOSING_BODY_PARAGRAPH_2",
+        "CLOSING_BODY_PARAGRAPH_3",
+        "CLOSING_FOOTER"
+      ],
+      "slots": {
+        "READER_FIRST_NAME": {
+          "x": 198,
+          "y": 506,
+          "w": 140,
+          "h": 12,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PERSONAL_YEAR": {
+          "x": 160,
+          "y": 444,
+          "w": 130,
+          "h": 16,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "SUN_SIGN": {
+          "x": 35,
+          "y": 411,
+          "w": 90,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "MOON_SIGN": {
+          "x": 137,
+          "y": 411,
+          "w": 90,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "RISING_SIGN": {
+          "x": 237,
+          "y": 411,
+          "w": 90,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "LIFE_PATH": {
+          "x": 337,
+          "y": 411,
+          "w": 80,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "CLOSING_BODY_PARAGRAPH_1": {
+          "x": 35,
+          "y": 369,
+          "w": 380,
+          "h": 75,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "CLOSING_BODY_PARAGRAPH_2": {
+          "x": 35,
+          "y": 281,
+          "w": 380,
+          "h": 75,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "CLOSING_BODY_PARAGRAPH_3": {
+          "x": 35,
+          "y": 199,
+          "w": 380,
+          "h": 75,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "CLOSING_FOOTER": {
+          "x": 100,
+          "y": 39,
+          "w": 250,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
+    },
+    "body-continued": {
+      "file": "07-body-continued-editable.pdf",
+      "purpose": "Continuation prose page — used after `standard-body` when chapter text overruns the first page",
+      "facing": "either",
+      "placeholders": [
+        "READER_FIRST_NAME",
+        "CHAPTER_TITLE",
+        "BODY_PARAGRAPH",
+        "SUBSECTION_HEADING",
+        "PAGE_NUMBER"
+      ],
+      "slots": {
+        "READER_FIRST_NAME": {
+          "x": 42,
+          "y": 616,
+          "w": 143,
+          "h": 16,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "CHAPTER_TITLE": {
-          "x": 317.52,
-          "y": 615,
-          "w": 86.97,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d4_f4"
+          "x": 220,
+          "y": 616,
+          "w": 188,
+          "h": 16,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 185,
+          "y": 40,
+          "w": 80,
+          "h": 18,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BODY_PARAGRAPH": [
+          {
+            "x": 42,
+            "y": 578,
+            "w": 366,
+            "h": 115,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 42,
+            "y": 449,
+            "w": 366,
+            "h": 115,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 42,
+            "y": 290,
+            "w": 366,
+            "h": 115,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 42,
+            "y": 161,
+            "w": 366,
+            "h": 115,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ],
+        "SUBSECTION_HEADING": {
+          "x": 56,
+          "y": 322,
+          "w": 352,
+          "h": 20,
+          "fontSize": 11,
+          "fontName": "acro-field"
         }
       }
     },
     "section-divider": {
-      "file": "06-section-divider.pdf",
+      "file": "06-section-divider-editable.pdf",
       "purpose": "Between major parts of the book — full-bleed art",
       "facing": "either",
       "placeholders": [
@@ -363,48 +736,56 @@
         "PART_TAGLINE"
       ],
       "slots": {
-        "PART_NUM": [
-          {
-            "x": 86.52,
-            "y": 615,
-            "w": 61.39,
-            "h": 8.5,
-            "fontSize": 8.5,
-            "fontName": "g_d5_f2"
-          },
-          {
-            "x": 219.2,
-            "y": 447.75,
-            "w": 61.39,
-            "h": 8.5,
-            "fontSize": 8.5,
-            "fontName": "g_d5_f2"
-          }
-        ],
-        "PART_TITLE": {
-          "x": 192.61,
-          "y": 258.75,
-          "w": 71.62,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d5_f2"
-        },
         "READER_FIRST_NAME": {
-          "x": 297.06,
-          "y": 615,
-          "w": 107.43,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d5_f2"
+          "x": 155,
+          "y": 578,
+          "w": 150,
+          "h": 11,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PART_TITLE": {
+          "x": 140,
+          "y": 391,
+          "w": 177,
+          "h": 30,
+          "fontSize": 11,
+          "fontName": "acro-field"
         },
         "PART_TAGLINE": {
-          "x": 187.49,
-          "y": 222,
-          "w": 81.85,
-          "h": 8.5,
-          "fontSize": 8.5,
-          "fontName": "g_d5_f4"
-        }
+          "x": 187,
+          "y": 345,
+          "w": 83,
+          "h": 12,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 189,
+          "y": 48,
+          "w": 78,
+          "h": 11,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PART_NUM": [
+          {
+            "x": 52,
+            "y": 595,
+            "w": 123,
+            "h": 11,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          },
+          {
+            "x": 282,
+            "y": 595,
+            "w": 143,
+            "h": 11,
+            "fontSize": 11,
+            "fontName": "acro-field"
+          }
+        ]
       }
     }
   },
@@ -526,10 +907,15 @@
   },
   "chapterRecipes": [
     {
+      "section": "toc",
+      "title": "Contents",
+      "$note": "Programmatically generated — no template file. Listed first so it lands on page 1."
+    },
+    {
       "section": "welcome",
       "title": "Disclaimer & Welcome Letter",
       "templates": [
-        "standard-body"
+        "welcome-letter"
       ]
     },
     {
@@ -692,7 +1078,7 @@
       "section": "closing",
       "title": "A Love Letter from the Universe",
       "templates": [
-        "standard-body-with-quotes"
+        "closing-letter"
       ]
     }
   ],

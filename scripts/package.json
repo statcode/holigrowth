@@ -7,10 +7,12 @@
     "hello": "tsx ./src/hello.ts",
     "seed-products": "tsx ./src/seed-products.ts",
     "extract-template-slots": "tsx ./src/extract-template-slots.ts",
+    "audit-templates": "tsx ./src/audit-templates.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.7.284",
     "tsx": "catalog:"
   },

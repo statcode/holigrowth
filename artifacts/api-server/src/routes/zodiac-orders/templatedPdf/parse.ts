@@ -43,7 +43,10 @@ export type PageTypeKey =
   | "standard-body-with-quotes"
   | "data-numerology"
   | "affirmations"
-  | "section-divider";
+  | "section-divider"
+  | "welcome-letter"
+  | "closing-letter"
+  | "body-continued";
 
 export type RecipeStep = PageTypeKey | "zodiac-sign" | "standard-body+";
 

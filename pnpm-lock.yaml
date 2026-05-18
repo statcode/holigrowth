@@ -574,6 +574,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       pdfjs-dist:
         specifier: ^5.7.284
         version: 5.7.284
