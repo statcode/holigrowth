@@ -975,6 +975,29 @@ async function buildPullQuotePage(
   if (!pageType) return { consumed: 0, total: 0 };
   const rc: RenderCtx = { page, fonts: ctx.fonts, pageType: "standard-body-with-quotes" };
 
+  // ── Cover the template's decorative band ──────────────────────────────
+  // The user asked to remove the two horizontal gold rules + ★ markers in
+  // the middle of the page (since we place the quote below them, the band
+  // is empty content). Direct row-averaging of the template raster at the
+  // rule positions (skipping the ★ glyph column) shows the surrounding bg
+  // is uniformly `rgb(245, 241, 230)` ± 1 unit — so a strip painted at
+  // EXACTLY that colour, only 2pt tall (just enough to cover the rule's
+  // line thickness), blends invisibly into the surrounding bg.
+  const RULE_BG = rgb(245/255, 241/255, 230/255);
+  const ruleStrip = (x: number, y: number, w: number, h: number) =>
+    page.drawRectangle({ x, y, width: w, height: h, color: RULE_BG });
+  ruleStrip(40, 477, 372, 2); // top rule at y≈478
+  ruleStrip(40, 434, 372, 2); // bottom rule at y≈435
+  // ★ + badge squares centred on glyph positions
+  drawMaskRect(rc, 210, 465, 30, 18);
+  drawMaskRect(rc, 210, 447, 30, 18);
+  // PULL_QUOTE widget rect (the small cream box between the rules)
+  const quoteSlotBg = getSlot(pageType, "PULL_QUOTE");
+  if (quoteSlotBg) drawMaskRect(rc, quoteSlotBg.x - 4, quoteSlotBg.y - 6, quoteSlotBg.w + 8, quoteSlotBg.h + 10);
+  // SUBSECTION_HEADING widget rect (baked cream behind the heading)
+  const subSlotBg = getSlot(pageType, "SUBSECTION_HEADING");
+  if (subSlotBg) drawMaskRect(rc, subSlotBg.x - 2, subSlotBg.y - 6, subSlotBg.w + 4, subSlotBg.h + 8);
+
   const nameSlot = getSlot(pageType, "READER_FIRST_NAME");
   const titleSlot = getSlot(pageType, "CHAPTER_TITLE");
   if (nameSlot) fillSlot(rc, "READER_FIRST_NAME", nameSlot, firstName(ctx.order));
@@ -982,29 +1005,32 @@ async function buildPullQuotePage(
 
   const subSlot = getSlot(pageType, "SUBSECTION_HEADING");
   const lastSub = ch.subsections[ch.subsections.length - 1];
-  if (subSlot) {
-    if (lastSub?.heading) fillSlot(rc, "SUBSECTION_HEADING", subSlot, lastSub.heading);
-    else maskSlot(rc, subSlot);
+  if (subSlot && lastSub?.heading) {
+    fillSlot(rc, "SUBSECTION_HEADING", subSlot, lastSub.heading);
   }
 
-  // Mask every body slot so any baked-in placeholder hints disappear
-  // regardless of which slots end up with content.
   const bodySlots = getSlots(pageType, "BODY_PARAGRAPH");
-  for (const s of bodySlots) maskSlot(rc, s);
 
-  // ── Pull quote — render first so we know its vertical extent ───────────
-  // The template's divider band is ~30pt tall, but a long quote can't
-  // possibly fit in that window at readable size. We let the quote occupy
-  // whatever vertical space it needs (around its anchor y≈466) and then
-  // shrink the body zones to clear the actual rendered extent. This trades
-  // a slight visual overlap with the template's decorative rules for a
-  // guarantee that no text gets cut off.
+  // ── Pull quote — placed BELOW the template's decorative band ──────────
+  // The template has a fixed pull-quote band at y≈435-478 (two horizontal
+  // gold rules with ★ markers between them). The space between the rules
+  // is only ~43pt — a long quote at readable size needs 80-100pt and
+  // can't fit. Previous attempts tried to MASK the rules with a flat-color
+  // rectangle, but the template's raster has paper-grain texture that no
+  // single RGB value can match, so the mask was always visible as a
+  // "cutoff box" against the textured surroundings.
+  //
+  // The clean fix: position the quote ENTIRELY BELOW the decorative band
+  // (centerY ≈ 365). The band remains visible above the quote as a small
+  // ornament between the subsection heading and the quote text — its
+  // original visual purpose preserved without any masking. Quote text
+  // never intersects the rules or ★ glyphs, so no mask is needed.
   const quoteSlot = getSlot(pageType, "PULL_QUOTE");
   const quoteText = ch.pullQuote ?? ch.lead.split(/(?<=[.!?])\s+/)[0] ?? "";
-  const QUOTE_CENTER_Y = quoteSlot ? quoteSlot.y - 6 : 460; // visual centre of the decorative band
+  const QUOTE_CENTER_Y = 365; // below the bottom rule at y≈435
   const quoteExtent = quoteSlot
     ? drawPullQuoteCentered(rc, quoteText, QUOTE_CENTER_Y)
-    : { topY: 482, bottomY: 448 };
+    : { topY: 408, bottomY: 322 };
 
   // ── Source paragraphs (caller may supply, else derive from the chapter) ─
   const source =
@@ -1015,14 +1041,17 @@ async function buildPullQuotePage(
 
   if (source.length === 0) return { consumed: 0, total: 0 };
 
-  // ── Body zones (sized AROUND the actual quote extent) ──────────────────
+  // ── Body zones ─────────────────────────────────────────────────────────
+  // Above-zone sits between the subsection heading and the decorative band
+  // (band top rule is at y≈478). Below-zone sits below the quote.
   const SAFE_BOTTOM = 45;
   const PARAGRAPH_GAP = 14;
+  const DECORATIVE_BAND_TOP = 484; // 6pt buffer above top rule at y=478
   const bodyStyle = resolveStyle("BODY_PARAGRAPH", "standard-body-with-quotes");
   const leading = bodyStyle.size * (bodyStyle.leading ?? 1.45);
   const aboveStart = bodySlots[0]?.y ?? 545;
-  const aboveCap = quoteExtent.topY + 8;       // clear top of quote
-  const belowStart = Math.min(bodySlots[2]?.y ?? 425, quoteExtent.bottomY - leading - 6);
+  const aboveCap = DECORATIVE_BAND_TOP;          // clear top of decorative band
+  const belowStart = quoteExtent.bottomY - leading - 6;
   const belowCap = SAFE_BOTTOM;
 
   let consumed = 0;
@@ -1141,25 +1170,10 @@ function drawPullQuoteCentered(
   const totalHeight = (lines.length - 1) * leading + size; // ascender + last descender
   const baseline0 = centerY + totalHeight / 2 - ascender;
 
-  // NO big rectangle mask here. The template's raster has paper-grain
-  // texture (pixels vary 244-247 across all channels), so any uniform
-  // flat-color rectangle stands out as a visible patch — the rectangle
-  // we used to draw to "cover" the decorative rules looked like a
-  // cream cutout box. Instead, paint only the two tiny ★ glyph centers
-  // (found by sampling the raster at PDF y≈473 and y≈455, both at the
-  // page's horizontal centre x≈225). These small patches blend in
-  // because (a) they're 14×14pt — too small for the eye to read as
-  // a "box" against the textured page — and (b) they get covered by
-  // the quote text drawn on top. The faint gold horizontal rules
-  // remain visible through the text (acceptable: Cormorant italic on
-  // a faint gold rule is still legible).
-  const STAR_TOP_Y = 473;
-  const STAR_BOTTOM_Y = 455;
-  const STAR_X = 225;
-  const STAR_SIZE = 14;
-  for (const sy of [STAR_TOP_Y, STAR_BOTTOM_Y]) {
-    drawMaskRect(rc, STAR_X - STAR_SIZE / 2, sy - STAR_SIZE / 2, STAR_SIZE, STAR_SIZE);
-  }
+  // No mask needed. The caller (`buildPullQuotePage`) positions the
+  // quote BELOW the template's decorative band (centerY≈365), so the
+  // quote text never intersects the rules or ★ glyphs at y≈435-478.
+  // The band stays visible above the quote as a clean ornament.
 
   const pageWidth = rc.page.getSize().width;
   for (let i = 0; i < lines.length; i++) {

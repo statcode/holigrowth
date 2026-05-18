@@ -219,24 +219,15 @@ A few intentional behaviours to know about (defined in
   decorative quote band). The renderer (`buildPullQuotePage`):
   1. **Auto-shrinks the quote font** in 0.5pt steps (from 16pt down to 11pt
      min) until the wrapped quote is at most 6 lines.
-  2. **Tiny targeted ★ masks only — no big mask rectangle.** The template
-     has two horizontal gold rules with ★ markers in their centers (at
-     PDF coords `(225, 473)` and `(225, 455)` — verified by sampling the
-     template raster for gold pixels). Earlier attempts painted a large
-     374×120pt cream rectangle over the whole decorative band to hide
-     both ★ and both rules. That rectangle stood out as a visible "box"
-     no matter what cream value we used, because the template's raster
-     has **paper-grain texture** — pixels vary between (244, 241, 230)
-     and (247, 244, 234) across the page. Any single flat RGB triple is
-     detectable against the texture. The fix: draw only two 14×14pt
-     masks centered on the ★ glyph positions. These small patches blend
-     in (too small for the eye to read as a "box" against the textured
-     bg) and are mostly covered by the quote text drawn on top. The
-     faint horizontal rules remain visible through the quote text —
-     Cormorant italic on a faint gold rule is still legible, and the
-     rules read as a deliberate design element. `TEMPLATE_CREAM` is
-     still `[0.961, 0.949, 0.910]` (page-bg sampled), used for these
-     small ★ masks and for the body-continued SUBSECTION_HEADING mask.
+  2. **Quote positioned BELOW the decorative band.** The template has
+     a fixed pull-quote band at PDF y≈435-478 (two horizontal gold rules
+     with ★ markers at `(225, 473)` and `(225, 455)`). The space between
+     the rules is only ~43pt — too tight for a long quote at readable
+     size. The renderer sets `QUOTE_CENTER_Y = 365`, placing the quote
+     entirely below the bottom rule. The decorative band stays visible
+     above the quote as a small ornament between the subsection heading
+     and the quote text. No masking needed since the quote never
+     intersects the rules or ★ glyphs.
   3. **Sizes body zones around the actual quote extent**, not the template's
      fixed band — so a long quote pushes body paragraphs out of the way
      instead of overlapping them.
@@ -346,6 +337,23 @@ tokens (e.g. extra placeholders found in the PDF that weren't in the list).
    non-interactive print PDF.
 
 ## Known issues / questions for the designer
+
+### Pending: re-export all `-editable.pdf` templates with transparent widget fills
+
+**All currently-uploaded `-editable.pdf` templates need to be re-exported from
+Claude.ai with the AcroForm widget fill colour set to TRANSPARENT (or
+matching the exact page-bg cream `rgb(245, 241, 232)`).** The current export
+bakes a slightly-darker cream rectangle (`rgb(245, 240, 229)`) into the
+page raster at every widget position. These rectangles read as visible
+"cutout boxes" on the rendered page — one per placeholder — and cannot be
+cleanly masked from code because the template raster has a subtle gradient
+(no single flat colour matches every region's surrounding page bg).
+Affects: header bands (`READER_FIRST_NAME` / `CHAPTER_TITLE`),
+`SUBSECTION_HEADING`, every `BODY_PARAGRAPH_*`, `PULL_QUOTE`, and the ★
+badges in `03-standard-body-with-quotes`'s decorative band. After
+re-export, the only visible elements should be the intentional decorative
+artwork (gold rules, ★ glyphs on the pull-quote page) — no widget-bg
+rectangles.
 
 - **`07-body-continued` has a stray ★ glyph at (47, 324)** drawn outside the
   `SUBSECTION_HEADING_1` AcroForm widget rectangle. The renderer covers it
