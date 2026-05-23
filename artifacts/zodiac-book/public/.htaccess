@@ -21,8 +21,10 @@ RewriteEngine On
 </IfModule>
 
 # Forward /api/* to the Node backend (PM2-managed) on the loopback interface.
-# Port matches PORT in the server's .env file.
-RewriteRule ^api/(.*)$ http://127.0.0.1:8088/api/$1 [P,L]
+# Port must match PORT in the server's .env file. holigrowth uses 8089 to
+# avoid colliding with colorgifts' API on 8088 (both apps live on the same
+# Cloudways VM and bind to the host loopback).
+RewriteRule ^api/(.*)$ http://127.0.0.1:8089/api/$1 [P,L]
 
 # SPA fallback: any non-file, non-directory request serves index.html so
 # wouter's client-side routes (e.g. /admin, /create, /order/:id, /privacy)
