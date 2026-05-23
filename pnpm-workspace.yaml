@@ -36,5 +36,5 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
-  '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
-  esbuild: 0.27.3
+  '@esbuild-kit/esm-loader': 'npm:tsx@^4.21.0'
+  esbuild: '0.27.3'
