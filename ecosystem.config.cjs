@@ -58,6 +58,20 @@
  * one in `package.json` → `packageManager`, the install will fail with
  * ERR_PNPM_LOCKFILE_CONFIG_MISMATCH — `npm install -g pnpm@<version>` to
  * align, or drop `--frozen-lockfile` for one-off recovery.
+ *
+ * ─── Port assignments on shared Cloudways VMs ─────────────────────────────
+ *
+ * Every Node app on this Cloudways VM (526984.cloudwaysapps.com) binds to
+ * 127.0.0.1:PORT on the host loopback. Collisions crash-loop pm2 with
+ * EADDRINUSE. Current assignments:
+ *
+ *   colorgifts-api   → 8088
+ *   holigrowth-api   → 8089   ← this app
+ *
+ * When adding a new app, claim the next free port (8090, …) and update
+ * BOTH the app's .env PORT value AND its public/.htaccess reverse-proxy
+ * target. The .htaccess port is baked in at build time, so the two must
+ * match per-app.
  */
 module.exports = {
   apps: [
