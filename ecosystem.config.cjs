@@ -1,24 +1,63 @@
 /**
  * pm2 process config for the api-server on Cloudways (and any plain Linux host).
  *
- * Usage on the server (first deploy):
+ * ─── ⚠ Cloudways one-time setup: relocate PM2_HOME ─────────────────────────
+ *
+ * Cloudways' app shells have a READ-ONLY home directory (owned by root, your
+ * SSH user only has read+exec). The system-installed pm2 at `/usr/bin/pm2`
+ * defaults its state directory to `~/.pm2/` — which it can't create. Every
+ * pm2 command then crashes with:
+ *
+ *     EACCES: permission denied, mkdir '/home/.../.pm2/logs'
+ *
+ * Some Cloudways apps have `~/.pm2/` pre-created by support / provisioning;
+ * fresh apps don't. Sidestep the whole issue by parking pm2's state inside
+ * `~/public_html/` (which IS writable by your SSH user):
+ *
+ *     mkdir -p $HOME/public_html/.pm2-holigrowth
+ *     export PM2_HOME=$HOME/public_html/.pm2-holigrowth
+ *     # Persist for every future SSH session + cron job:
+ *     echo 'export PM2_HOME=$HOME/public_html/.pm2-holigrowth' >> ~/.bashrc
+ *
+ * Verify with `pm2 list` (should print an empty process table). The dotfile
+ * dir is not web-reachable — Cloudways' Apache only serves what's mapped to
+ * the document root, not arbitrary dotfile siblings.
+ *
+ * Skip this whole section on any host where `touch ~/.write-test` succeeds.
+ *
+ * ─── First deploy on a new server ──────────────────────────────────────────
+ *
+ *   # one-time: pnpm version match (Cloudways' system pnpm may be old)
+ *   npm install -g pnpm@10.33.0
+ *
+ *   # one-time: PM2_HOME relocation (see warning block above)
+ *   mkdir -p $HOME/public_html/.pm2-holigrowth
+ *   echo 'export PM2_HOME=$HOME/public_html/.pm2-holigrowth' >> ~/.bashrc
+ *   source ~/.bashrc
+ *
+ *   # deploy
+ *   git clone <repo> ~/public_html && cd ~/public_html
  *   pnpm install --frozen-lockfile
  *   pnpm build:front
  *   pnpm build:back
  *   pm2 start ecosystem.config.cjs
  *   pm2 save                  # persist process list across reboots
- *   pm2 startup               # one-time: install the systemd hook
+ *   pm2 startup               # one-time: install the systemd hook (may need sudo)
  *
- * Usage on every subsequent deploy:
+ * ─── Every subsequent deploy ───────────────────────────────────────────────
+ *
+ *   cd ~/public_html
  *   git pull origin main
- *   pnpm install --frozen-lockfile
+ *   pnpm install --frozen-lockfile        # skip if deps unchanged
  *   pnpm build:front
  *   pnpm build:back
- *   pm2 reload holigrowth-api    # zero-downtime restart
+ *   pm2 reload holigrowth-api             # zero-downtime restart
  *
  * `pnpm install --frozen-lockfile` ensures the production install matches the
- * committed `pnpm-lock.yaml`. Skip it if no dependencies changed since the
- * last deploy.
+ * committed `pnpm-lock.yaml`. If the server's pnpm version differs from the
+ * one in `package.json` → `packageManager`, the install will fail with
+ * ERR_PNPM_LOCKFILE_CONFIG_MISMATCH — `npm install -g pnpm@<version>` to
+ * align, or drop `--frozen-lockfile` for one-off recovery.
  */
 module.exports = {
   apps: [
