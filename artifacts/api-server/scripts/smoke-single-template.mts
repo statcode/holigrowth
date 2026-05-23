@@ -29,6 +29,10 @@ const VALID_IDS: SingleTemplateId[] = [
   "welcome-letter",
   "closing-letter",
   "body-stress",
+  "hardcover",
+  "zodiac-moon",
+  "zodiac-rising",
+  "birthstone",
 ];
 
 const args = process.argv.slice(2).filter((a) => a !== "--");

@@ -124,21 +124,55 @@ export function extractZodiacMetadata(fullName: string, birthday: string, birthT
   return { sunSign, moonSign, risingSign, lifePath, luckyNumbers };
 }
 
+/** Birthstone metadata for Chapter 13 (BONUS). The renderer has the same
+ *  table — keep them in sync. Pulled from the American Gem Society's modern
+ *  birthstone list (with the traditional alternates Pearl/Alexandrite and
+ *  Turquoise/Tanzanite acknowledged in the prose). */
+const BIRTHSTONE_BY_MONTH: Record<number, { name: string; meaning: string }> = {
+  1:  { name: "Garnet",      meaning: "trust, strength, and protection" },
+  2:  { name: "Amethyst",    meaning: "royal calm, intuition, and quiet wisdom" },
+  3:  { name: "Aquamarine",  meaning: "tranquility, hope, and clarity of mind" },
+  4:  { name: "Diamond",     meaning: "eternity, strength, and resilience" },
+  5:  { name: "Emerald",     meaning: "rebirth, devoted love, and growth" },
+  6:  { name: "Pearl",       meaning: "purity, balance, and quiet wisdom (traditional alternate: Alexandrite)" },
+  7:  { name: "Ruby",        meaning: "passion, courage, and vital aliveness" },
+  8:  { name: "Peridot",     meaning: "prosperity, joy, and inner strength" },
+  9:  { name: "Sapphire",    meaning: "truth, loyalty, and sovereign wisdom" },
+  10: { name: "Opal",        meaning: "creativity, hope, and emotional healing" },
+  11: { name: "Citrine",     meaning: "joy, abundance, and warm positivity" },
+  12: { name: "Turquoise",   meaning: "good fortune and spiritual alignment (traditional alternate: Tanzanite)" },
+};
+
+function birthstoneForBirthday(birthday: string): { name: string; meaning: string } {
+  const m = /^\d{4}-(\d{2})-/.exec(birthday);
+  const month = m ? parseInt(m[1]!, 10) : 1;
+  return BIRTHSTONE_BY_MONTH[month] ?? BIRTHSTONE_BY_MONTH[1]!;
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function birthMonthName(birthday: string): string {
+  const m = /^\d{4}-(\d{2})-/.exec(birthday);
+  const month = m ? parseInt(m[1]!, 10) : 1;
+  return MONTH_NAMES[month - 1] ?? "January";
+}
+
 export function generateZodiacPrompt(order: ZodiacOrder): string {
   const metadata = extractZodiacMetadata(order.fullName, order.birthday, order.birthTime, order.birthLocation);
   const destinyNumber = getDestinyNumber(order.fullName);
   const soulUrgeNumber = getSoulUrgeNumber(order.fullName);
   const personalYear = getPersonalYearNumber(order.birthday);
+  const birthstone = birthstoneForBirthday(order.birthday);
+  const birthMonth = birthMonthName(order.birthday);
 
   const isFemale = order.gender !== "male";
   const pronoun = isFemale ? "her" : "his";
   const pronounSub = isFemale ? "she" : "he";
   const pronounObj = isFemale ? "her" : "him";
   const pronounPoss = isFemale ? "her" : "his";
-
-  const affirmationsSection = order.customAffirmations
-    ? `\n\nPersonal Affirmations & Mantras submitted by ${order.fullName}:\n"${order.customAffirmations}"\n\nWeave these personal affirmations meaningfully throughout the book — especially in the affirmations chapter and closing message. Honor their exact words.`
-    : "";
 
   const orientationLabel: Record<string, string> = {
     straight: "heterosexual / straight",
@@ -181,7 +215,6 @@ Calculated Astrological & Numerological Profile:
 - Soul Urge Number: ${soulUrgeNumber}
 - Personal Year Number (${new Date().getFullYear()}): ${personalYear}
 - Lucky Numbers: ${metadata.luckyNumbers}
-${affirmationsSection}
 
 Please write a deeply personal, richly detailed "Holistic Growth Life Path" book with these chapters.
 TARGET: 40–50 printed pages of rich, personal content (aim for 400–600 words per chapter — be specific and meaningful, not padded).
@@ -211,7 +244,7 @@ Write 500–600 words across 3–4 paragraphs. This is the most personal chapter
 - What ${pronounSub} truly needs from a partner; Personal Year ${personalYear} love timing
 - Practical guidance for ${pronounPoss} relationships right now given ${pronounPoss} current status
 
-End the chapter with a section titled exactly "## Your 10 Relationship Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign}/${metadata.moonSign} combination, sexual orientation (${orientation}), and current relationship status (${relStatus}). Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific situation — not generic platitudes. Practical and actionable: something ${pronounSub} can repeat in the morning and act on the same day.${order.customAffirmations ? ` Where natural, echo themes from ${pronounPoss} submitted affirmations: "${order.customAffirmations}".` : ""}
+End the chapter with a section titled exactly "## Your 10 Relationship Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign}/${metadata.moonSign} combination, sexual orientation (${orientation}), and current relationship status (${relStatus}). Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific situation — not generic platitudes. Practical and actionable: something ${pronounSub} can repeat in the morning and act on the same day.
 
 # Chapter 6: Wealth & Abundance — Your Cosmic Path to Prosperity
 Write 500–600 words across 3–4 paragraphs:
@@ -220,7 +253,7 @@ Write 500–600 words across 3–4 paragraphs:
 - Best aligned income paths; Personal Year ${personalYear} financial timing
 - Two practical abundance practices for ${pronounPoss} signs
 
-End the chapter with a section titled exactly "## Your 10 Wealth Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, Destiny Number ${destinyNumber}, ${metadata.sunSign} money archetype, and Personal Year ${personalYear} timing. Each affirmation must be a complete first-person statement (not a fragment) and must address ${pronounPoss} specific wealth gifts and blind spots. Practical and actionable: phrased so ${pronounSub} can repeat them at the start of every workday.${order.customAffirmations ? ` Where natural, echo themes from ${pronounPoss} submitted affirmations: "${order.customAffirmations}".` : ""}
+End the chapter with a section titled exactly "## Your 10 Wealth Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, Destiny Number ${destinyNumber}, ${metadata.sunSign} money archetype, and Personal Year ${personalYear} timing. Each affirmation must be a complete first-person statement (not a fragment) and must address ${pronounPoss} specific wealth gifts and blind spots. Practical and actionable: phrased so ${pronounSub} can repeat them at the start of every workday.
 
 # Chapter 7: Health & Vitality — Your Body's Cosmic Code
 Write 500–600 words across 3–4 paragraphs:
@@ -228,7 +261,7 @@ Write 500–600 words across 3–4 paragraphs:
 - What drains vs. replenishes ${pronounObj}; stress patterns and seasonal rhythms
 - Two mind-body practices designed for ${pronounPoss} cosmic blueprint
 
-End the chapter with a section titled exactly "## Your 10 Health Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s ${metadata.sunSign} body zones, ${metadata.moonSign} emotional-body needs, and ${metadata.risingSign} energetic patterns. Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific body and energy. Practical and actionable: tied to a daily habit or moment (waking, eating, moving, resting) so ${pronounSub} can live them, not just read them.${order.customAffirmations ? ` Where natural, echo themes from ${pronounPoss} submitted affirmations: "${order.customAffirmations}".` : ""}
+End the chapter with a section titled exactly "## Your 10 Health Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s ${metadata.sunSign} body zones, ${metadata.moonSign} emotional-body needs, and ${metadata.risingSign} energetic patterns. Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific body and energy. Practical and actionable: tied to a daily habit or moment (waking, eating, moving, resting) so ${pronounSub} can live them, not just read them.
 
 # Chapter 8: Your Numerological Fortune — Lucky Numbers & Timing
 Write 500–600 words. Interpret each number concisely for ${order.fullName}:
@@ -241,7 +274,7 @@ Write 500–600 words. Interpret each number concisely for ${order.fullName}:
 Write 400–500 words across 3 paragraphs. Key natal placements (Sun, Moon, Rising ruler). Current transits activating ${pronounPoss} chart. How timing affects ${pronounPoss} three pillars this year.
 
 # Chapter 10: Your Daily Mantras
-Write 300–400 words. The 30 long-form affirmations live at the end of the three pillar chapters (5, 6, 7). This chapter is different — short, chant-like power phrases ${order.fullName} can carry through the day. Open with one short paragraph (3–4 sentences) on how to use a mantra: how to pair it with breath, how to repeat it silently in transit, on a walk, before sleep. Then list exactly 9 mantras under three subheadings — "## Morning" (3 mantras), "## Midday" (3 mantras), "## Evening" (3 mantras) — one per line. Each mantra must be 3–7 words, written in first person, and rooted in ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign} energy, and Personal Year ${personalYear}. They should sound like things a person could actually say out loud — not flowery prose.${order.customAffirmations ? `\n\nIncorporate words and themes from ${pronounPoss} submitted affirmations where they fit naturally: "${order.customAffirmations}"` : ""}
+Write 300–400 words. The 30 long-form affirmations live at the end of the three pillar chapters (5, 6, 7). This chapter is different — short, chant-like power phrases ${order.fullName} can carry through the day. Open with one short paragraph (3–4 sentences) on how to use a mantra: how to pair it with breath, how to repeat it silently in transit, on a walk, before sleep. Then list exactly 9 mantras under three subheadings — "## Morning" (3 mantras), "## Midday" (3 mantras), "## Evening" (3 mantras) — one per line. Each mantra must be 3–7 words, written in first person, and rooted in ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign} energy, and Personal Year ${personalYear}. They should sound like things a person could actually say out loud — not flowery prose.
 
 # Chapter 11: Your Sacred Morning Ritual
 Write 350–450 words. A concise step-by-step morning practice (8–10 minutes) for ${order.fullName}'s chart: breath sequence, affirmation, visualization for Life Path ${metadata.lifePath}, grounding movement for ${metadata.sunSign}.
@@ -261,6 +294,18 @@ September: [1–2 sentences]
 October: [1–2 sentences]
 November: [1–2 sentences]
 December: [1–2 sentences]
+
+# Chapter 13 (BONUS): Your Birthstone — A Talisman Aligned to Your Birth Month
+${order.fullName} was born in ${birthMonth}, so ${pronoun} birthstone is **${birthstone.name}** — traditionally associated with ${birthstone.meaning}. Do not propose an alternate stone.
+
+Write 500–700 words of richly personalized prose, in this order:
+1. Open by naming ${pronounPoss} birth month and ${birthstone.name} in one warm welcoming sentence (no list, no headers in the opener).
+2. Tell the lore in 2–3 sentences — the stone's traditional symbolism, who valued it historically, what it was believed to protect or attract. Stay grounded; no occult guarantees.
+3. Connect ${birthstone.name} to ${pronounPoss} chart in 3–4 sentences. Be specific: name how the stone resonates with ${metadata.sunSign} Sun, ${metadata.moonSign} Moon, or ${metadata.risingSign} Rising, and how it amplifies Life Path ${metadata.lifePath}. Identify the placement of ${pronoun} that the stone most clearly counterbalances or supports.
+4. Offer exactly two practical carry-practices — short, sensory, achievable. Examples: wearing the stone during a specific moon phase, placing it on a journal during morning ritual, holding it while repeating one of ${pronounPoss} affirmations from Chapters 5/6/7. Keep them concrete enough that ${pronounSub} could try one today.
+5. **End the chapter with one \`> \` blockquote pull quote** — a single 1–2 sentence line in second-person voice that names the stone's gift to ${pronounObj}.
+
+No alternate stones, no horoscope generalisations, no list-and-dump of facts. The chapter should feel like an heirloom handed across the table — celebratory, personal, and warm.
 
 # Closing: A Love Letter from the Universe
 Write 300–400 words. A deeply moving, personally addressed closing to ${order.fullName} from the cosmos. Remind ${pronounObj} of ${pronounPoss} unique gifts and the path ahead. End with ${pronounPoss} lucky numbers as a blessing.

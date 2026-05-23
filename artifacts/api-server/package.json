@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps --env-file-if-exists=../../.env ./dist/index.mjs",
     "smoke-pdf": "tsx --env-file-if-exists=../../.env ./scripts/smoke-templated-pdf.mts",
+    "smoke-full-book": "tsx --env-file-if-exists=../../.env ./scripts/smoke-full-book.mts",
     "smoke-template": "tsx --env-file-if-exists=../../.env ./scripts/smoke-single-template.mts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

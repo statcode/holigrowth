@@ -553,7 +553,6 @@ export async function sendTestEmail(
     moonSign: "Scorpio",
     risingSign: "Capricorn",
     lifePath: "7",
-    customAffirmations: null,
     luckyNumbers: "3, 7, 12, 21",
     referralCode: "SAMPLE123",
     referredBy: null,

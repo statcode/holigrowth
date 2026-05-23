@@ -1909,24 +1909,6 @@ async function generateInteriorPDFLegacy(order: ZodiacOrder, content: string, op
 
     // ── Post-content visual pages ──────────────────────────────────────────
     if (limitReached) { doc.end(); return; }
-    // ── Affirmations page ──────────────────────────────────────────────────
-    if (order.customAffirmations) {
-      doc.addPage();
-      doc.rect(0, 0, PAGE_W, PAGE_H).fill(hexToRgb(BRAND.deepPurple));
-
-      pdfColor(doc, BRAND.gold);
-      doc.font("Helvetica-Bold").fontSize(16).text("Your Personal Affirmations", SAFE, PAGE_H * 0.12, {
-        align:"center", width: PAGE_W - SAFE*2,
-      });
-
-      doc.moveTo(PAGE_W * 0.3, PAGE_H * 0.21).lineTo(PAGE_W * 0.7, PAGE_H * 0.21)
-        .strokeColor(hexToRgb(BRAND.gold)).lineWidth(0.6).stroke();
-
-      pdfColor(doc, "#d4b8f0");
-      doc.font("Helvetica-Oblique").fontSize(11).text(order.customAffirmations, SAFE + 10, PAGE_H * 0.26, {
-        width: PAGE_W - SAFE*2 - 20, align:"center", lineGap: 7,
-      });
-    }
 
     // ── Lucky numbers back matter ──────────────────────────────────────────
     if (order.luckyNumbers) {
@@ -1979,7 +1961,30 @@ async function generateInteriorPDFLegacy(order: ZodiacOrder, content: string, op
 
 // ─── Cover PDF ────────────────────────────────────────────────────────────────
 
+import { buildHardcoverWrap } from "./templatedPdf/render";
+
+/**
+ * Builds the hardcover case-wrap PDF that prints around the outside of the
+ * hardback book. Primary path is `buildHardcoverWrap` (the templated wrap
+ * driven by `00-hardcover-editable.pdf` — fills BOOK_TITLE, READER_FIRST_NAME,
+ * BIRTH_PLACE, DATE_OF_BIRTH, FULL_NAME widgets onto the designer artwork).
+ *
+ * `pageCount` is currently unused by the templated path because the wrap PDF
+ * is delivered at a fixed total size (14 × 10.75 in = 1008 × 774 pt) with
+ * the spine width baked into the template artwork by the designer. The Lulu
+ * pod package this targets (`0600X0900FCSTDHC060CW444GXX`) has a minimum
+ * hardcover spine width determined by the board thickness, not the linear
+ * `pageCount / 444` paperback formula — see
+ * artifacts/book-templates/README.md ("Hardcover wrap") for the print spec.
+ * The legacy pdfkit-from-scratch path (`generateCoverPDFLegacy`) is kept
+ * for diagnostic comparison and computes the spine dynamically.
+ */
 export async function generateCoverPDF(order: ZodiacOrder, pageCount: number): Promise<Buffer> {
+  void pageCount; // unused — see docblock above
+  return buildHardcoverWrap(order);
+}
+
+async function generateCoverPDFLegacy(order: ZodiacOrder, pageCount: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
 

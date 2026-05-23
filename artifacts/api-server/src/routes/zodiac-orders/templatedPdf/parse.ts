@@ -46,7 +46,10 @@ export type PageTypeKey =
   | "section-divider"
   | "welcome-letter"
   | "closing-letter"
-  | "body-continued";
+  | "body-continued"
+  | "zodiac-moon"
+  | "zodiac-rising"
+  | "birthstone";
 
 export type RecipeStep = PageTypeKey | "zodiac-sign" | "standard-body+";
 
@@ -146,10 +149,29 @@ export interface ParsedBook {
 
 // ── Parser ───────────────────────────────────────────────────────────────────
 
-/** Extract the first markdown blockquote from a body string, or null. */
+/** Extract the chapter's featured pull quote — the LAST markdown blockquote
+ *  in the chapter body. The system prompt (`book-prompt.md`) instructs the
+ *  model to end every chapter with a single `> ...` line that becomes this
+ *  quote, so taking the last one survives chapters that may have multiple
+ *  blockquotes mid-body (model occasionally uses them for emphasis). Falls
+ *  back to the last sentence of the lead paragraph if no blockquote exists. */
 function extractPullQuote(body: string, fallbackLead: string): string | null {
-  const blockquote = /^>\s+(.+?)$/m.exec(body);
-  if (blockquote && blockquote[1]) return blockquote[1].trim();
+  // Collect multi-line blockquotes (consecutive `>` lines joined with spaces)
+  // so a quote that wraps onto a second line still parses cleanly.
+  const blockquotes: string[] = [];
+  let current: string[] = [];
+  for (const line of body.split("\n")) {
+    const m = /^>\s?(.*)$/.exec(line);
+    if (m) {
+      current.push(m[1] ?? "");
+    } else if (current.length) {
+      blockquotes.push(current.join(" ").replace(/\s+/g, " ").trim());
+      current = [];
+    }
+  }
+  if (current.length) blockquotes.push(current.join(" ").replace(/\s+/g, " ").trim());
+  const last = blockquotes.filter(Boolean).pop();
+  if (last) return last;
   // Heuristic: the last sentence of the lead paragraph, if reasonably short.
   const sentences = fallbackLead.split(/(?<=[.!?])\s+(?=[A-Z])/).filter((s) => s.length > 20 && s.length < 220);
   if (sentences.length === 0) return null;
@@ -158,9 +180,16 @@ function extractPullQuote(body: string, fallbackLead: string): string | null {
 
 /** Split a chapter body into lead + subsections. */
 function parseChapterBody(body: string): { lead: string; subsections: ParsedSubsection[] } {
-  // Split on `##` (with leading newline) — also tolerate `### ` for subsections.
-  const parts = body.split(/\n(?=#{2,3}\s+)/);
-  const leadBlock = parts.shift() ?? "";
+  // Split on `##` or `###` (start-of-body OR after a newline). The previous
+  // regex required `\n` before the marker, which silently dropped the first
+  // subsection on chapters whose body began directly with `## Subsection`
+  // (no lead paragraph). Anchoring with `(?:^|\n)` handles both forms.
+  const parts = body.split(/(?:^|\n)(?=#{2,3}\s+)/);
+  // First element is the lead paragraph(s) BEFORE any subsection. If the
+  // body starts directly with `##`, the first part is the first subsection
+  // (already starting with `##`) and there's no lead.
+  const firstStartsWithSubheading = /^#{2,3}\s+/.test(parts[0] ?? "");
+  const leadBlock = firstStartsWithSubheading ? "" : (parts.shift() ?? "");
   const lead = leadBlock.trim().split(/\n\n+/)[0]?.trim() ?? "";
   const subsections: ParsedSubsection[] = parts
     .map((part) => {
@@ -170,6 +199,10 @@ function parseChapterBody(body: string): { lead: string; subsections: ParsedSubs
       const rest = lines.join("\n").trim();
       const paragraphs = rest
         .split(/\n\n+/)
+        // Drop blockquote paragraphs (`> ...`) — these are chapter pull
+        // quotes that may trail the last subsection without a `##` break.
+        // `extractPullQuote` still finds them by scanning the raw body.
+        .filter((p) => !/^\s*>/.test(p))
         .map((p) => p.replace(/\s+/g, " ").trim())
         .filter(Boolean);
       return { heading, paragraphs };
@@ -178,11 +211,18 @@ function parseChapterBody(body: string): { lead: string; subsections: ParsedSubs
   return { lead, subsections };
 }
 
-/** Pull a numbered list (`1. ...` through `10. ...`) out of a subsection's paragraphs. */
+/** Pull a numbered list (`1. ...` through `10. ...`) out of a subsection's
+ *  paragraphs. Tolerates both newline-separated and space-separated items —
+ *  `parseChapterBody` normalises whitespace inside paragraphs to single
+ *  spaces, so by the time we see the list it may already be one long
+ *  "1. ... 2. ... 3. ..." string. */
 function extractNumberedList(subsection: ParsedSubsection): string[] {
   const out: string[] = [];
-  const text = subsection.paragraphs.join("\n");
-  const re = /^\s*(\d{1,2})\.\s+(.+?)(?=\n\s*\d{1,2}\.\s|\n\n|$)/gms;
+  const text = subsection.paragraphs.join(" ");
+  // Match each "N." marker and lazily grab content until the next "N." or end.
+  // The lookahead requires a digit-dot-space pattern AT a word boundary so we
+  // don't trip on decimals like "2.5".
+  const re = /\b(\d{1,2})\.\s+([^]+?)(?=\s+\d{1,2}\.\s+\S|\s*$)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     out.push(m[2]!.replace(/\s+/g, " ").trim());
@@ -234,7 +274,12 @@ function extractMonthlyForecast(body: string): { month: string; text: string }[]
 }
 
 /** Heading detection: tolerant of `#` or `##`, and of "Chapter N:" / "Closing:" / "Welcome" / "Disclaimer" prefixes. */
-const HEADING_RE = /^#{1,2}\s+(.+)$/gm;
+// Top-level section breaks. The system prompt (`book-prompt.md`) uses
+// `# Chapter N: ...` for chapter starts and `## ` for subsections inside
+// chapter bodies, so we match ONLY a single `#` — including `##` here
+// would eat every subsection as a fresh chapter and strip the body content
+// (and the chapter's `> ` pull-quote) into separate sections.
+const HEADING_RE = /^#\s+(.+)$/gm;
 
 interface RawSection {
   kind: "welcome" | "chapter" | "closing";

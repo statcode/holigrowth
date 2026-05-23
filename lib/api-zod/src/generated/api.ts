@@ -66,7 +66,6 @@ export const ListZodiacOrdersResponseItem = zod.object({
   moonSign: zod.string().nullish(),
   risingSign: zod.string().nullish(),
   lifePath: zod.string().nullish(),
-  customAffirmations: zod.string().nullish(),
   luckyNumbers: zod.string().nullish(),
   referralCode: zod.string().nullish(),
   referredBy: zod.string().nullish(),
@@ -113,10 +112,6 @@ export const CreateZodiacOrderBody = zod.object({
     ])
     .optional()
     .describe("Current relationship status — shapes the Relationships chapter"),
-  customAffirmations: zod
-    .string()
-    .optional()
-    .describe("Personal affirmations and mantras to weave into the book"),
   referredBy: zod
     .string()
     .optional()
@@ -182,7 +177,6 @@ export const GetZodiacOrderResponse = zod.object({
   moonSign: zod.string().nullish(),
   risingSign: zod.string().nullish(),
   lifePath: zod.string().nullish(),
-  customAffirmations: zod.string().nullish(),
   luckyNumbers: zod.string().nullish(),
   referralCode: zod.string().nullish(),
   referredBy: zod.string().nullish(),
@@ -197,6 +191,13 @@ export const GetZodiacOrderResponse = zod.object({
   coverPdfUrl: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+});
+
+/**
+ * @summary Permanently delete a zodiac order (admin only). Drops the DB row and orphans any uploaded PDFs. Use with care — not reversible.
+ */
+export const DeleteZodiacOrderParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -272,7 +273,6 @@ export const SubmitToLuluResponse = zod.object({
   moonSign: zod.string().nullish(),
   risingSign: zod.string().nullish(),
   lifePath: zod.string().nullish(),
-  customAffirmations: zod.string().nullish(),
   luckyNumbers: zod.string().nullish(),
   referralCode: zod.string().nullish(),
   referredBy: zod.string().nullish(),
@@ -386,7 +386,6 @@ export const GetOrderStatsResponse = zod.object({
         moonSign: zod.string().nullish(),
         risingSign: zod.string().nullish(),
         lifePath: zod.string().nullish(),
-        customAffirmations: zod.string().nullish(),
         luckyNumbers: zod.string().nullish(),
         referralCode: zod.string().nullish(),
         referredBy: zod.string().nullish(),

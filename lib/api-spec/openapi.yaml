@@ -83,6 +83,21 @@ paths:
                 $ref: "#/components/schemas/ZodiacOrder"
         "404":
           description: Order not found
+    delete:
+      operationId: deleteZodiacOrder
+      tags: [zodiac-orders]
+      summary: Permanently delete a zodiac order (admin only). Drops the DB row and orphans any uploaded PDFs. Use with care — not reversible.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Order deleted
+        "404":
+          description: Order not found
 
   /zodiac-orders/{id}/generate:
     post:
@@ -273,8 +288,6 @@ components:
           type: ["string", "null"]
         lifePath:
           type: ["string", "null"]
-        customAffirmations:
-          type: ["string", "null"]
         luckyNumbers:
           type: ["string", "null"]
         referralCode:
@@ -344,9 +357,6 @@ components:
           type: string
           enum: [single, in_relationship, married, divorced, widowed, not_seeking]
           description: Current relationship status — shapes the Relationships chapter
-        customAffirmations:
-          type: string
-          description: Personal affirmations and mantras to weave into the book
         referredBy:
           type: string
           description: Referral code used by the person who referred this customer

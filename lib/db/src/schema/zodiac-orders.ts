@@ -25,7 +25,6 @@ export const zodiacOrdersTable = mysqlTable(
     shippingAddress: text("shipping_address"),
     sexualOrientation: varchar("sexual_orientation", { length: 32 }),
     relationshipStatus: varchar("relationship_status", { length: 32 }),
-    customAffirmations: text("custom_affirmations"),
     luckyNumbers: text("lucky_numbers"),
     referralCode: text("referral_code"),
     referredBy: text("referred_by"),

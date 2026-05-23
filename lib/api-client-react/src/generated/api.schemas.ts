@@ -105,8 +105,6 @@ export interface ZodiacOrder {
   /** @nullable */
   lifePath?: string | null;
   /** @nullable */
-  customAffirmations?: string | null;
-  /** @nullable */
   luckyNumbers?: string | null;
   /** @nullable */
   referralCode?: string | null;
@@ -196,8 +194,6 @@ export interface CreateZodiacOrderBody {
   sexualOrientation?: CreateZodiacOrderBodySexualOrientation;
   /** Current relationship status — shapes the Relationships chapter */
   relationshipStatus?: CreateZodiacOrderBodyRelationshipStatus;
-  /** Personal affirmations and mantras to weave into the book */
-  customAffirmations?: string;
   /** Referral code used by the person who referred this customer */
   referredBy?: string;
   /** Whether the user consented to receive marketing emails */

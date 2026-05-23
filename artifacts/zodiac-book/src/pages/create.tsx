@@ -15,7 +15,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useCreateZodiacOrder } from "@workspace/api-client-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -25,12 +24,11 @@ const formSchema = z.object({
   birthTime: z.string().refine((v) => v === "" || /^\d{2}:\d{2}$/.test(v), "Please enter a valid time (HH:MM)"),
   birthLocation: z.string().min(2, "Please enter your birth city and country."),
   email: z.string().email("Please enter a valid email address."),
-  customAffirmations: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 9;
 
 const CheckIcon = () => (
   <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -114,7 +112,6 @@ export default function Create() {
       birthTime: "",
       birthLocation: "",
       email: "",
-      customAffirmations: "",
     },
   });
 
@@ -629,45 +626,9 @@ export default function Create() {
                   </motion.div>
                 )}
 
-                {/* ── Step 9: Custom Affirmations ── */}
+                {/* ── Step 9: Order Summary ── */}
                 {step === 9 && (
-                  <motion.div key="step9-affirmations" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                    <div className="text-center mb-10">
-                      <p className="text-secondary italic font-serif text-base mb-2">Optional but powerful</p>
-                      <h2 className="text-3xl font-serif mb-4 text-foreground">Affirmations & Mantras</h2>
-                      <p className="text-muted-foreground font-light leading-relaxed">
-                        {intention === "gift"
-                          ? "Do they have affirmations or mantras they live by? We'll weave their own words into the 30 personalized affirmations across the love, wealth & health chapters — and into the daily mantras, morning ritual, and closing love letter."
-                          : "Do you have affirmations or mantras you already live by? We'll weave your own words into the 30 personalized affirmations across the love, wealth & health chapters — and into your daily mantras, morning ritual, and closing love letter from the universe."}
-                      </p>
-                    </div>
-                    <FormField control={form.control} name="customAffirmations" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-primary/80 uppercase tracking-widest text-xs">Affirmations (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            data-testid="input-affirmations"
-                            placeholder={"e.g.\nI am worthy of abundant love.\nMoney flows to me with ease.\nMy body is strong and radiant."}
-                            className="min-h-[160px] text-base bg-white border-border focus-visible:ring-primary resize-none leading-relaxed"
-                            {...field}
-                          />
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground/70 mt-1">Write as many as you like. One per line works great.</p>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <div className="flex gap-4">
-                      <Button data-testid="button-prev-step4" type="button" variant="outline" className="h-14 px-6 border-border hover:bg-muted rounded-xl" onClick={prevStep}><ArrowLeft className="w-5 h-5" /></Button>
-                      <Button data-testid="button-next-step4" type="button" className="flex-1 h-14 text-lg bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl" onClick={() => nextStep(["customAffirmations"])}>
-                        Continue <ChevronRight className="ml-2 w-5 h-5" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* ── Step 10: Order Summary ── */}
-                {step === 10 && (
-                  <motion.div key="step10-summary" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+                  <motion.div key="step9-summary" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                     <div className="text-center mb-10">
                       <h2 className="text-3xl font-serif mb-4 text-foreground">Almost There</h2>
                       <p className="text-muted-foreground font-light">Review your details before we start generating your book.</p>
@@ -682,9 +643,6 @@ export default function Create() {
                         <p><span className="text-muted-foreground w-28 inline-block">Date:</span> {form.getValues("birthday")}</p>
                         <p><span className="text-muted-foreground w-28 inline-block">Time:</span> {form.getValues("birthTime")}</p>
                         <p><span className="text-muted-foreground w-28 inline-block">Location:</span> {form.getValues("birthLocation")}</p>
-                        {form.getValues("customAffirmations") && (
-                          <p><span className="text-muted-foreground w-28 inline-block">Affirmations:</span> <span className="italic">Included ✓</span></p>
-                        )}
                       </div>
                     </div>
 

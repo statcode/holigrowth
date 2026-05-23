@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, type FormEvent } from "react";
 import { useAdmin } from "@/contexts/admin-context";
-import { useListZodiacOrders, useGetOrderStats, useGetSiteSettings, useUpdateSiteSettings, getListZodiacOrdersQueryKey, getGetOrderStatsQueryKey, getGetSiteSettingsQueryKey } from "@workspace/api-client-react";
+import { useListZodiacOrders, useGetOrderStats, useGetSiteSettings, useUpdateSiteSettings, useDeleteZodiacOrder, getListZodiacOrdersQueryKey, getGetOrderStatsQueryKey, getGetSiteSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, ChevronRight, X, Users, BookOpen, Truck, Clock,
   AlertCircle, TrendingUp, RefreshCw, ExternalLink, Copy, Check,
-  ChevronDown, Hash, Star, Download, Settings, Save, Image, Webhook, Link, Mail
+  ChevronDown, Hash, Star, Download, Settings, Save, Image, Webhook, Link, Mail, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,6 @@ type ZodiacOrder = {
   risingSign?: string | null;
   lifePath?: string | null;
   luckyNumbers?: string | null;
-  customAffirmations?: string | null;
   referralCode?: string | null;
   referredBy?: string | null;
   referralCount: number;
@@ -92,7 +91,36 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetDone, setResetDone] = useState(false);
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteOrder = useDeleteZodiacOrder();
   const signLine = [order.sunSign, order.moonSign && `${order.moonSign} Moon`, order.risingSign && `${order.risingSign} Rising`].filter(Boolean).join(" · ");
+
+  // Reset the arm state whenever a different order opens.
+  useEffect(() => { setDeleteArmed(false); setDeleteError(null); }, [order.id]);
+
+  const handleDelete = () => {
+    if (!deleteArmed) {
+      setDeleteArmed(true);
+      // Auto-disarm after 5s so a stale armed button doesn't fire on a misclick.
+      setTimeout(() => setDeleteArmed(false), 5000);
+      return;
+    }
+    setDeleteError(null);
+    deleteOrder.mutate(
+      { id: order.id },
+      {
+        onSuccess: () => {
+          onRefreshed();
+          onClose();
+        },
+        onError: (err) => {
+          setDeleteError(err instanceof Error ? err.message : "Delete failed");
+          setDeleteArmed(false);
+        },
+      },
+    );
+  };
 
   const handleRegeneratePdf = async () => {
     setIsRegenerating(true);
@@ -233,16 +261,6 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
             </div>
           )}
 
-          {/* Affirmations */}
-          {order.customAffirmations && (
-            <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Custom Affirmations</p>
-              <div className="rounded-xl border border-border bg-muted/40 p-4">
-                <p className="text-sm text-foreground/75 font-light leading-relaxed whitespace-pre-wrap italic">"{order.customAffirmations}"</p>
-              </div>
-            </div>
-          )}
-
           {/* Generated content */}
           {order.generatedContent && (
             <div>
@@ -340,10 +358,9 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
           )}
 
           {/* Admin Actions */}
-          {(order.generatedContent || ["generating", "failed", "pending"].includes(order.status)) && (
-            <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Admin Actions</p>
-              <div className="flex flex-col gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Admin Actions</p>
+            <div className="flex flex-col gap-2">
 
                 {/* Reset stuck order — visible for generating / failed / pending */}
                 {["generating", "failed", "pending"].includes(order.status) && (
@@ -419,9 +436,38 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
                     )}
                   </>
                 )}
+
+              {/* Danger zone — permanently delete this order */}
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-[10px] uppercase tracking-widest text-red-600/70 mb-2">Danger Zone</p>
+                <Button
+                  variant="outline"
+                  className={`w-full gap-2 rounded-xl border-red-200 disabled:opacity-60 ${deleteArmed ? "bg-red-600 text-white border-red-600 hover:bg-red-700 hover:text-white" : "text-red-700 hover:bg-red-50"}`}
+                  onClick={handleDelete}
+                  disabled={deleteOrder.isPending}
+                >
+                  {deleteOrder.isPending ? (
+                    <><RefreshCw className="w-4 h-4 animate-spin" /> Deleting…</>
+                  ) : deleteArmed ? (
+                    <><Trash2 className="w-4 h-4" /> Click again to confirm permanent delete</>
+                  ) : (
+                    <><Trash2 className="w-4 h-4" /> Delete Order</>
+                  )}
+                </Button>
+                {deleteArmed && !deleteOrder.isPending && (
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    This permanently removes order #{order.id} ({order.fullName}) from the database. Cannot be undone.
+                  </p>
+                )}
+                {deleteError && (
+                  <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mt-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{deleteError}</span>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">

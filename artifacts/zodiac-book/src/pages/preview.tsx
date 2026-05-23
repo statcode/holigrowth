@@ -170,7 +170,6 @@ type OrderLike = {
   risingSign?: string | null;
   lifePath?: string | null;
   luckyNumbers?: string | null;
-  customAffirmations?: string | null;
 };
 
 // ─── Content parsing ───────────────────────────────────────────────────────────
@@ -795,17 +794,14 @@ function PlanetGridPage({ order }: { order?: OrderLike }) {
 
 // ── Affirmations Visual ────────────────────────────────────────────────────────
 
-function AffirmationsVisualPage({ order }: { order?: OrderLike }) {
-  const raw = order?.customAffirmations;
-  const lines = raw
-    ? raw.split(/[.\n]+/).filter((s) => s.trim().length > 10).map((s) => s.trim()).slice(0, 5)
-    : [
-        "I am aligned with my highest path.",
-        "Love flows to me effortlessly.",
-        "Abundance is my natural state.",
-        "My body is a sacred vessel of vitality.",
-        "The universe conspires in my favor.",
-      ];
+function AffirmationsVisualPage({ order: _order }: { order?: OrderLike }) {
+  const lines = [
+    "I am aligned with my highest path.",
+    "Love flows to me effortlessly.",
+    "Abundance is my natural state.",
+    "My body is a sacred vessel of vitality.",
+    "The universe conspires in my favor.",
+  ];
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden select-none"

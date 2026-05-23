@@ -20,10 +20,14 @@ if (!stripeKey || stripeKey.length < 10) {
   logger.info('Stripe key present — checkout ready');
 }
 
-app.listen(port, (err) => {
+// Bind to loopback only — on Cloudways the public Apache/Nginx server
+// reverse-proxies /api/* to this process over 127.0.0.1. Binding to the
+// public interface (0.0.0.0) would expose the Node port directly, which
+// we don't want.
+app.listen(port, '127.0.0.1', (err) => {
   if (err) {
     logger.error({ err }, 'Error listening on port');
     process.exit(1);
   }
-  logger.info({ port }, 'Server listening');
+  logger.info({ port }, 'Server listening on 127.0.0.1');
 });

@@ -222,7 +222,7 @@ export default function Checkout() {
 
             <div className="flex gap-6 items-start mb-8">
               <div className="w-24 h-32 bg-muted rounded-lg shadow overflow-hidden relative flex-shrink-0">
-                <img src="/images/book-mockup.png" alt="Book Preview" className="w-full h-full object-cover" />
+                <img src="/images/book-cover-mockup.png" alt="Book Preview" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h3 className="font-serif text-lg text-foreground mb-1">Holistic Growth Life Path Hardcover</h3>

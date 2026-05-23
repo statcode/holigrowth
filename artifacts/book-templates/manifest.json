@@ -192,79 +192,45 @@
       ],
       "slots": {
         "READER_FIRST_NAME": {
-          "x": 47,
+          "x": 42,
           "y": 617,
-          "w": 143,
-          "h": 10,
+          "w": 146,
+          "h": 14,
           "fontSize": 11,
           "fontName": "acro-field"
         },
         "CHAPTER_TITLE": {
-          "x": 268,
+          "x": 262,
           "y": 617,
-          "w": 138,
-          "h": 10,
+          "w": 146,
+          "h": 14,
           "fontSize": 11,
           "fontName": "acro-field"
         },
         "SUBSECTION_HEADING": {
-          "x": 47,
-          "y": 570,
-          "w": 206,
-          "h": 17,
+          "x": 42,
+          "y": 582,
+          "w": 360,
+          "h": 18,
           "fontSize": 11,
           "fontName": "acro-field"
         },
         "PULL_QUOTE": {
-          "x": 185,
-          "y": 470,
-          "w": 90,
-          "h": 16,
+          "x": 55,
+          "y": 448,
+          "w": 340,
+          "h": 160,
           "fontSize": 11,
           "fontName": "acro-field"
         },
         "PAGE_NUMBER": {
-          "x": 84,
-          "y": 44,
-          "w": 287,
-          "h": 13,
+          "x": 185,
+          "y": 38,
+          "w": 80,
+          "h": 14,
           "fontSize": 11,
           "fontName": "acro-field"
-        },
-        "BODY_PARAGRAPH": [
-          {
-            "x": 47,
-            "y": 545,
-            "w": 363,
-            "h": 14,
-            "fontSize": 11,
-            "fontName": "acro-field"
-          },
-          {
-            "x": 61,
-            "y": 518,
-            "w": 349,
-            "h": 14,
-            "fontSize": 11,
-            "fontName": "acro-field"
-          },
-          {
-            "x": 47,
-            "y": 425,
-            "w": 363,
-            "h": 13,
-            "fontSize": 11,
-            "fontName": "acro-field"
-          },
-          {
-            "x": 61,
-            "y": 398,
-            "w": 349,
-            "h": 13,
-            "fontSize": 11,
-            "fontName": "acro-field"
-          }
-        ]
+        }
       }
     },
     "data-numerology": {
@@ -335,15 +301,15 @@
         },
         "SIGN_GLYPH": {
           "x": 67,
-          "y": 249,
+          "y": 224,
           "w": 210,
-          "h": 28,
+          "h": 18,
           "fontSize": 11,
           "fontName": "acro-field"
         },
         "SIGN": {
           "x": 232,
-          "y": 205,
+          "y": 185,
           "w": 70,
           "h": 11,
           "fontSize": 11,
@@ -351,7 +317,7 @@
         },
         "HOUSE": {
           "x": 232,
-          "y": 186,
+          "y": 166,
           "w": 58,
           "h": 11,
           "fontSize": 11,
@@ -376,7 +342,7 @@
           },
           {
             "x": 232,
-            "y": 167,
+            "y": 147,
             "w": 70,
             "h": 11,
             "fontSize": 11,
@@ -394,7 +360,7 @@
           },
           {
             "x": 232,
-            "y": 148,
+            "y": 128,
             "w": 69,
             "h": 11,
             "fontSize": 11,
@@ -787,6 +753,141 @@
           }
         ]
       }
+    },
+    "zodiac-moon": {
+      "file": "zodiac-moon-editable.pdf",
+      "purpose": "Chapter 3 feature page — Your Moon Sign (single template, sign chosen at render time from order.moonSign)",
+      "facing": "recto",
+      "placeholders": [
+        "BOOK_TITLE",
+        "ZODIAC_NAME_MOON",
+        "ZODIAC_GLYPH_MOON",
+        "PAGE_NUMBER"
+      ],
+      "slots": {
+        "BOOK_TITLE": {
+          "x": 41.76,
+          "y": 614.49,
+          "w": 91.24,
+          "h": 9.75,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "ZODIAC_NAME_MOON": {
+          "x": 85.78,
+          "y": 334.71,
+          "w": 271.61,
+          "h": 25.88,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "ZODIAC_GLYPH_MOON": {
+          "x": 160.41,
+          "y": 84.04,
+          "w": 122.33,
+          "h": 9,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 182.19,
+          "y": 58.71,
+          "w": 78.79,
+          "h": 12.38,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
+    },
+    "birthstone": {
+      "file": "08-birthstone-editable.pdf",
+      "purpose": "Chapter 13 (BONUS) feature page — Your Birthstone. Stone is resolved at render time from the customer's birth month (Jan→Garnet, Feb→Amethyst, …). The BIRTHSTONE_IMAGE widget is filled with a PNG from artifacts/book-templates/birthstones/<slug>.png if present; otherwise the renderer draws a vector gemstone (filled coloured circle with a decorative ring) so the page is never blank.",
+      "facing": "recto",
+      "placeholders": [
+        "CHAPTER_TITLE",
+        "BIRTHSTONE_IMAGE",
+        "BIRTHSTONE_BODY",
+        "PAGE_NUMBER"
+      ],
+      "slots": {
+        "BIRTHSTONE_IMAGE": {
+          "x": 149,
+          "y": 388,
+          "w": 158,
+          "h": 159,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "CHAPTER_TITLE": {
+          "x": 265,
+          "y": 618,
+          "w": 143,
+          "h": 9,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BIRTHSTONE_BODY": {
+          "x": 108,
+          "y": 172,
+          "w": 240,
+          "h": 38,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 189,
+          "y": 45,
+          "w": 78,
+          "h": 13,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
+    },
+    "zodiac-rising": {
+      "file": "zodiac-rising-editable.pdf",
+      "purpose": "Chapter 4 feature page — Your Rising Sign (single template, sign chosen at render time from order.risingSign)",
+      "facing": "recto",
+      "placeholders": [
+        "BOOK_TITLE",
+        "ZODIAC_NAME_RISING",
+        "ZODIAC_GLYPH_RISING",
+        "PAGE_NUMBER"
+      ],
+      "slots": {
+        "BOOK_TITLE": {
+          "x": 41.76,
+          "y": 614.49,
+          "w": 91.24,
+          "h": 9.75,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "ZODIAC_NAME_RISING": {
+          "x": 95.04,
+          "y": 333.31,
+          "w": 253.07,
+          "h": 23.25,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "ZODIAC_GLYPH_RISING": {
+          "x": 158.91,
+          "y": 84.04,
+          "w": 125.34,
+          "h": 9,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 182.19,
+          "y": 58.71,
+          "w": 78.79,
+          "h": 12.38,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
     }
   },
   "zodiacSigns": {
@@ -953,8 +1054,10 @@
       "section": "chapter",
       "chapter": 3,
       "title": "Your Moon Sign",
+      "$note": "Moon-sign feature page is a single template; the sign is filled at render time from order.moonSign.",
       "templates": [
         "chapter-opener",
+        "zodiac-moon",
         "standard-body+",
         "standard-body-with-quotes"
       ]
@@ -963,8 +1066,10 @@
       "section": "chapter",
       "chapter": 4,
       "title": "Your Rising Sign",
+      "$note": "Rising-sign feature page is a single template; the sign is filled at render time from order.risingSign.",
       "templates": [
         "chapter-opener",
+        "zodiac-rising",
         "standard-body+",
         "standard-body-with-quotes"
       ]
@@ -1071,6 +1176,18 @@
         "chapter-opener",
         "standard-body+",
         "data-numerology",
+        "standard-body-with-quotes"
+      ]
+    },
+    {
+      "section": "chapter",
+      "chapter": 13,
+      "title": "BONUS: Your Birthstone — A Talisman Aligned to Your Birth Month",
+      "$note": "Birthstone (Garnet, Amethyst, Aquamarine, …) is resolved at render time from order.birthday's month — the AI writes about that stone's meaning + how it relates to the reader's chart.",
+      "templates": [
+        "chapter-opener",
+        "birthstone",
+        "standard-body+",
         "standard-body-with-quotes"
       ]
     },

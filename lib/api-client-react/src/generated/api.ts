@@ -363,6 +363,90 @@ export function useGetZodiacOrder<
 }
 
 /**
+ * @summary Permanently delete a zodiac order (admin only). Drops the DB row and orphans any uploaded PDFs. Use with care — not reversible.
+ */
+export const getDeleteZodiacOrderUrl = (id: number) => {
+  return `/api/zodiac-orders/${id}`;
+};
+
+export const deleteZodiacOrder = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteZodiacOrderUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteZodiacOrderMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteZodiacOrder>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteZodiacOrder>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteZodiacOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteZodiacOrder>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteZodiacOrder(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteZodiacOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteZodiacOrder>>
+>;
+
+export type DeleteZodiacOrderMutationError = ErrorType<void>;
+
+/**
+ * @summary Permanently delete a zodiac order (admin only). Drops the DB row and orphans any uploaded PDFs. Use with care — not reversible.
+ */
+export const useDeleteZodiacOrder = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteZodiacOrder>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteZodiacOrder>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteZodiacOrderMutationOptions(options));
+};
+
+/**
  * @summary Trigger AI content generation for an order (SSE streaming)
  */
 export const getGenerateZodiacContentUrl = (id: number) => {

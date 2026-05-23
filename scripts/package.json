@@ -8,6 +8,7 @@
     "seed-products": "tsx ./src/seed-products.ts",
     "extract-template-slots": "tsx ./src/extract-template-slots.ts",
     "audit-templates": "tsx ./src/audit-templates.ts",
+    "generate-marketing-images": "tsx ./src/generate-marketing-images.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

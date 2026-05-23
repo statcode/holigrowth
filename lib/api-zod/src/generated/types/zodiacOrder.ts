@@ -39,8 +39,6 @@ export interface ZodiacOrder {
   /** @nullable */
   lifePath?: string | null;
   /** @nullable */
-  customAffirmations?: string | null;
-  /** @nullable */
   luckyNumbers?: string | null;
   /** @nullable */
   referralCode?: string | null;

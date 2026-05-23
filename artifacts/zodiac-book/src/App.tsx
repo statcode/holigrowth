@@ -12,6 +12,9 @@ import Success from "@/pages/success";
 import Track from "@/pages/track";
 import Admin from "@/pages/admin";
 import Invite from "@/pages/invite";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
+import Contact from "@/pages/contact";
 import { AdminProvider } from "@/contexts/admin-context";
 import { AdminToolbar } from "@/components/admin-toolbar";
 
@@ -29,6 +32,9 @@ function Router() {
       <Route path="/track" component={Track} />
       <Route path="/admin" component={Admin} />
       <Route path="/invite/:code" component={Invite} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/contact" component={Contact} />
       <Route component={NotFound} />
     </Switch>
   );

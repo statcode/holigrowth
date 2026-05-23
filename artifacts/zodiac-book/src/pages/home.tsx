@@ -62,9 +62,13 @@ export default function Home() {
   const [activeThumb, setActiveThumb] = useState(0);
 
   const thumbs = [
-    { src: "/images/book-mockup.png", alt: "Holistic Growth Life Path — cover" },
-    { src: "/images/book-mockup.png", alt: "Interior — Relationships chapter" },
-    { src: "/images/book-mockup.png", alt: "Interior — Lucky Numbers" },
+    { src: "/images/book-cover-mockup.png",       alt: "Holistic Growth Life Path — front cover" },
+    { src: "/images/book-cover-mockup2.png",      alt: "Holistic Growth Life Path — cosmic mockup" },
+    { src: "/images/book-interior-opener.png",    alt: "Interior — chapter opener" },
+    { src: "/images/book-interior-body.png",      alt: "Interior — Moon Sign chapter body" },
+    { src: "/images/book-interior-affirmation.png", alt: "Interior — affirmation page" },
+    { src: "/images/book-interior-numerology.png", alt: "Interior — numerology data card" },
+    { src: "/images/book-interior-birthstone.png", alt: "Interior — birthstone talisman (BONUS Chapter 13)" },
   ];
 
   return (
@@ -76,10 +80,11 @@ export default function Home() {
       <header className="py-4 px-6 border-b border-border bg-white/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <img src="/images/holigrowth-logo.png" alt="Holigrowth" className="h-10 w-auto" />
-          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+          <nav className="hidden md:flex items-center gap-8 text-base font-semibold text-foreground/80">
             <a href="#inside" className="hover:text-foreground transition-colors">Inside the Book</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#reviews" className="hover:text-foreground transition-colors">Reviews</a>
+            <a href="https://shop.holigrowth.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Shop</a>
           </nav>
           <Link href={refCode ? `/create?ref=${refCode}` : "/create"}>
             <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6">
@@ -101,11 +106,11 @@ export default function Home() {
               transition={{ duration: 0.8 }}
               className="space-y-4"
             >
-              <div className="relative rounded-2xl overflow-hidden bg-muted aspect-[4/5] flex items-center justify-center shadow-xl">
+              <div className="relative rounded-2xl overflow-hidden bg-muted aspect-[125/185] flex items-center justify-center shadow-xl">
                 <img
                   src={thumbs[activeThumb]?.src}
                   alt={thumbs[activeThumb]?.alt}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
                 {/* USA badge on image */}
                 <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-white/95 backdrop-blur rounded-full px-4 py-2 shadow-md text-sm font-medium text-foreground">
@@ -113,12 +118,12 @@ export default function Home() {
                 </div>
               </div>
               {/* Thumbnails */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-7 gap-2">
                 {thumbs.map((t, i) => (
                   <button
                     key={i}
                     onClick={() => setActiveThumb(i)}
-                    className={`rounded-xl overflow-hidden aspect-square border-2 transition-all ${activeThumb === i ? "border-primary shadow-md" : "border-transparent opacity-60 hover:opacity-90"}`}
+                    className={`rounded-lg overflow-hidden aspect-[125/185] border-2 bg-muted transition-all ${activeThumb === i ? "border-primary shadow-md" : "border-transparent opacity-60 hover:opacity-90"}`}
                   >
                     <img src={t.src} alt={t.alt} className="w-full h-full object-cover" />
                   </button>
@@ -149,7 +154,7 @@ export default function Home() {
               </motion.div>
 
               <motion.p variants={fadeIn} className="text-foreground/75 font-light leading-relaxed text-[1.05rem]">
-                A <strong className="text-foreground font-semibold">40–50 page full-color hardbound book</strong> written entirely from your birth chart. Every word — your relationships, your wealth path, your health code, your lucky numbers, and a closing love letter from the universe — is generated uniquely for <em>you</em>.
+                A <strong className="text-foreground font-semibold">full-color hardbound book</strong> written entirely from your birth chart. Every word — your relationships, your wealth path, your health code, your lucky numbers, and a closing love letter from the universe — is <em>magically written</em> from the signals you send the cosmos at your unique moment in space and time. No two books are alike!
               </motion.p>
 
               {/* Trust badges */}
@@ -182,12 +187,12 @@ export default function Home() {
               <motion.div variants={fadeIn} className="pt-2 space-y-2.5 border-t border-border">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground pt-4 mb-3">What's inside every book</p>
                 {[
-                  "12 deeply personal chapters",
+                  "13 deeply personal chapters",
                   "Relationships, Wealth & Health pillars",
-                  <><strong>30 practical personalized affirmations</strong> — 10 each for love, money & health, written from your Life Path</>,
+                  <><strong>15 practical personalized affirmations</strong> — 5 each for love, money & health, written from your Life Path</>,
                   "Your lucky numbers with full interpretations",
-                  "Your custom affirmations woven throughout",
                   "Sacred morning ritual & month-by-month forecast",
+                  <><strong>BONUS Chapter 13</strong> — your birth-month birthstone as a personal talisman</>,
                   "A closing love letter from the universe",
                   <><strong><em>Preview your first pages free — before you order</em></strong></>,
                 ].map((item, i) => (
@@ -209,7 +214,7 @@ export default function Home() {
             {[
               { icon: Truck, label: "Ships from the USA", sub: "Fulfilled by Lulu Press" },
               { icon: BookOpen, label: "US Trade 6″ × 9″", sub: "Glossy hardcover case wrap" },
-              { icon: Flame, label: "AI-written for you", sub: "No two books alike" },
+              { icon: Flame, label: "Magically written for you", sub: "Cast from your unique space-time" },
               { icon: Package, label: "Ships in 2–3 weeks", sub: "Tracked & insured" },
             ].map(({ icon: Icon, label, sub }, i) => (
               <div key={i} className="flex flex-col items-center gap-2">
@@ -322,7 +327,7 @@ export default function Home() {
               <span className="italic opacity-90">you spend a cent.</span>
             </h2>
             <p className="mt-4 text-primary-foreground/75 font-light text-lg max-w-2xl mx-auto leading-relaxed">
-              Once you enter your details, your personalised book generates in minutes. You can read the opening chapters completely free — only order the physical hardbound copy if it moves you.
+              Once you enter your details, the cosmos writes your personalised book in minutes. You can read the opening chapters completely free — only order the physical hardbound copy if it moves you.
             </p>
           </motion.div>
           <motion.div
@@ -333,7 +338,7 @@ export default function Home() {
             className="grid sm:grid-cols-3 gap-4 mb-10"
           >
             {[
-              { icon: Zap, title: "Generates in minutes", desc: "AI writes your full 40–50 page book the moment you submit your details." },
+              { icon: Zap, title: "Written in minutes", desc: "The cosmos translates the signals from your unique moment in space-time into your book the instant you submit your details." },
               { icon: Eye, title: "Preview pages instantly", desc: "Read your opening chapters online — completely free, no payment required." },
               { icon: ShieldCheck, title: "Only pay if you love it", desc: "Order the luxury hardbound copy only when you're ready. Zero pressure." },
             ].map(({ icon: Icon, title, desc }, i) => (
@@ -396,7 +401,7 @@ export default function Home() {
                   "Love language & communication style by sign",
                   "Timing cycles for love this year",
                   "How to deepen your most important bonds",
-                  "10 personalized relationship affirmations",
+                  "5 personalized relationship affirmations",
                 ]
               },
               {
@@ -411,7 +416,7 @@ export default function Home() {
                   "Natural wealth gifts and money blind spots",
                   "Lucky timing windows for big decisions",
                   "Abundance practices aligned with your chart",
-                  "10 personalized wealth affirmations",
+                  "5 personalized wealth affirmations",
                 ]
               },
               {
@@ -426,7 +431,7 @@ export default function Home() {
                   "What drains vs. replenishes your energy",
                   "Stress patterns & mind-body practices",
                   "Seasonal rhythms your body wants to honor",
-                  "10 personalized health affirmations",
+                  "5 personalized health affirmations",
                 ]
               }
             ].map((pillar, i) => (
@@ -468,9 +473,9 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.9 }}
             >
-              <div className="relative rounded-3xl overflow-hidden aspect-[4/3] shadow-2xl">
-                <img src="/images/book-mockup.png" alt="Premium hardbound book" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 to-transparent" />
+              <div className="relative rounded-3xl overflow-hidden aspect-[4/3] shadow-2xl bg-muted">
+                <img src="/images/book-cover-mockup.png" alt="Premium hardbound book" className="w-full h-full object-contain" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 to-transparent pointer-events-none" />
                 <div className="absolute bottom-5 right-5 bg-white/95 backdrop-blur rounded-2xl px-5 py-4 shadow-lg">
                   <p className="text-2xl mb-1">🇺🇸</p>
                   <p className="font-serif text-foreground text-sm font-medium">Proudly printed<br />in the USA</p>
@@ -490,14 +495,14 @@ export default function Home() {
                 <span className="italic text-secondary">a lifetime</span>
               </motion.h2>
               <motion.p variants={fadeIn} className="text-muted-foreground font-light mb-8 leading-relaxed text-[1.05rem]">
-                Your book is printed in <strong className="text-foreground font-semibold">full color</strong> and bound in the United States to Lulu Press's US Trade standard — 40 to 50 richly illustrated pages on 60# uncoated white paper (6&Prime; × 9&Prime;) with a glossy case-wrap hardcover. Not a digital PDF — a real, physical volume you'll return to again and again.
+                Your book is printed in <strong className="text-foreground font-semibold">full color</strong> and bound in the United States to Lulu Press's US Trade standard — richly illustrated pages on 60# uncoated white paper (6&Prime; × 9&Prime;) with a glossy case-wrap hardcover. Not a digital PDF — a real, physical volume you'll return to again and again.
               </motion.p>
 
               <motion.div variants={fadeIn} className="grid grid-cols-2 gap-4 mb-8">
                 {[
-                  { num: "40–50", label: "Full-color pages" },
-                  { num: "12", label: "Personal chapters" },
-                  { num: "15+", label: "Custom affirmations" },
+                  { num: "13", label: "Personal chapters" },
+                  { num: "15", label: "Personal affirmations" },
+                  { num: "3", label: "Life pillars" },
                   { num: "5+", label: "Lucky numbers decoded" },
                 ].map((stat) => (
                   <div key={stat.label} className="p-4 rounded-2xl bg-muted border border-border text-center">
@@ -533,13 +538,12 @@ export default function Home() {
               How It <span className="italic text-secondary">Works</span>
             </h2>
           </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { step: "01", title: "Enter your email", desc: "Takes 30 seconds. We'll send your book link and order updates here." },
               { step: "02", title: "Share birth details", desc: "Name, birthday, birth time, and birth location. Two minutes total." },
-              { step: "03", title: "Add affirmations", desc: "Optionally submit your personal mantras — we weave them into your book word for word." },
-              { step: "04", title: "Preview your pages", desc: "Your book generates instantly. Read the opening chapters — completely free — before you spend anything.", highlight: true },
-              { step: "05", title: "Order & receive", desc: "Love what you see? Order your luxury hardbound copy and it ships from the USA in 2–3 weeks." },
+              { step: "03", title: "Preview your pages", desc: "The cosmos writes your book instantly. Read the opening chapters — completely free — before you spend anything.", highlight: true },
+              { step: "04", title: "Order & receive", desc: "Love what you see? Order your luxury hardbound copy and it ships from the USA in 2–3 weeks." },
             ].map((s, i) => (
               <motion.div
                 key={i}
@@ -663,7 +667,7 @@ export default function Home() {
               The most personal book<br />you'll ever hold.
             </h2>
             <p className="text-primary-foreground/75 font-light text-lg max-w-xl mx-auto leading-relaxed">
-              40–50 full-color pages written entirely about you. Preview your opening chapters free — then order your luxury hardbound copy, printed in the USA.
+              Full-color pages written entirely about you. Preview your opening chapters free — then order your luxury hardbound copy, printed in the USA.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
               <Link href={refCode ? `/create?ref=${refCode}` : "/create"}>
@@ -679,12 +683,16 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="py-10 px-6 border-t border-border bg-white">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div className="max-w-6xl mx-auto flex flex-col items-center gap-6 text-sm text-muted-foreground">
           <img src="/images/holigrowth-logo.png" alt="Holigrowth" className="h-8 w-auto" />
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <a href="#inside" className="hover:text-foreground transition-colors">Inside the Book</a>
             <a href="#reviews" className="hover:text-foreground transition-colors">Reviews</a>
             <Link href="/create" className="hover:text-foreground transition-colors">Create My Book</Link>
+            <span className="text-muted-foreground/40">·</span>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            <Link href="/contact" className="hover:text-foreground transition-colors">Contact</Link>
           </div>
           <p>© {new Date().getFullYear()} Holigrowth. All rights reserved.</p>
         </div>

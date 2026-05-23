@@ -17,7 +17,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage, type PDFEmbeddedPage } from "pdf-lib";
+import { PDFDocument, rgb, degrees, StandardFonts, type PDFFont, type PDFPage, type PDFEmbeddedPage } from "pdf-lib";
 import type { ZodiacOrder } from "@workspace/db";
 import {
   loadManifest,
@@ -53,8 +53,14 @@ const PAGE_BG: Record<PageTypeKey, [number, number, number]> = {
   "affirmations": TEMPLATE_CREAM,
   "section-divider": [0.04, 0.06, 0.10], // midnight — keep AcroForm mask skip elsewhere
   "welcome-letter": TEMPLATE_CREAM,
-  "closing-letter": TEMPLATE_CREAM,
+  // closing-letter was redesigned as a midnight purple "love letter from the
+  // universe" card — sampled bg rgb(41, 35, 70). Body text must be light/
+  // cream to read against it (see PAGE_FG below).
+  "closing-letter": [41/255, 35/255, 70/255],
   "body-continued": TEMPLATE_CREAM,
+  "zodiac-moon": TEMPLATE_CREAM,
+  "zodiac-rising": TEMPLATE_CREAM,
+  "birthstone": TEMPLATE_CREAM,
 };
 
 // Foreground text colours for each template's body copy.
@@ -66,8 +72,13 @@ const PAGE_FG: Record<PageTypeKey, [number, number, number]> = {
   "affirmations": [0.13, 0.10, 0.18],
   "section-divider": [0.95, 0.92, 0.78],
   "welcome-letter": [0.13, 0.10, 0.18],
-  "closing-letter": [0.13, 0.10, 0.18],
+  // closing-letter is midnight purple — use light cream for body text so it
+  // reads against the dark background (same approach as section-divider).
+  "closing-letter": [0.95, 0.92, 0.78],
   "body-continued": [0.13, 0.10, 0.18],
+  "zodiac-moon": [0.13, 0.10, 0.18],
+  "zodiac-rising": [0.13, 0.10, 0.18],
+  "birthstone": [0.13, 0.10, 0.18],
 };
 
 const GOLD: [number, number, number] = [0.79, 0.66, 0.30];
@@ -77,6 +88,46 @@ const ZODIAC_GLYPHS: Record<string, string> = {
   Leo: "♌", Virgo: "♍", Libra: "♎", Scorpio: "♏",
   Sagittarius: "♐", Capricorn: "♑", Aquarius: "♒", Pisces: "♓",
 };
+
+/** Birthstone metadata keyed by birth month (1 = January … 12 = December).
+ *  `slug` is the filename stem the renderer looks for under
+ *  `artifacts/book-templates/birthstones/<slug>.png` when filling
+ *  `BIRTHSTONE_IMAGE`. If the PNG is missing, the renderer falls back to a
+ *  vector gemstone drawn with `color` — `colorHi` is the small highlight
+ *  glint, `colorLo` is the inner shadow ring. Hex values pulled from common
+ *  gem photography references. */
+interface Birthstone {
+  name: string;          // "Garnet"
+  slug: string;          // "garnet" — filename stem for /birthstones/<slug>.png
+  tagline: string;       // short one-liner shown beneath the gem visual
+  color: [number, number, number];   // body fill (0..1 rgb)
+  colorHi: [number, number, number]; // highlight glint
+  colorLo: [number, number, number]; // inner shadow ring
+}
+const BIRTHSTONES: Record<number, Birthstone> = {
+  1:  { name: "Garnet",      slug: "garnet",      tagline: "Symbolizes trust, strength, and protection.",        color: [0.45, 0.08, 0.12], colorHi: [0.78, 0.30, 0.32], colorLo: [0.30, 0.05, 0.08] },
+  2:  { name: "Amethyst",    slug: "amethyst",    tagline: "Carries royal calm, intuition, and quiet wisdom.",   color: [0.42, 0.27, 0.62], colorHi: [0.74, 0.60, 0.90], colorLo: [0.28, 0.16, 0.45] },
+  3:  { name: "Aquamarine",  slug: "aquamarine",  tagline: "Channels tranquility, hope, and clarity of mind.",   color: [0.50, 0.78, 0.86], colorHi: [0.78, 0.93, 0.96], colorLo: [0.32, 0.58, 0.68] },
+  4:  { name: "Diamond",     slug: "diamond",     tagline: "Represents eternity, strength, and resilience.",     color: [0.92, 0.93, 0.96], colorHi: [1.00, 1.00, 1.00], colorLo: [0.72, 0.74, 0.80] },
+  5:  { name: "Emerald",     slug: "emerald",     tagline: "A symbol of rebirth, devoted love, and growth.",     color: [0.10, 0.50, 0.36], colorHi: [0.42, 0.78, 0.55], colorLo: [0.05, 0.32, 0.22] },
+  6:  { name: "Pearl",       slug: "pearl",       tagline: "Symbolizes purity, balance, and quiet wisdom.",      color: [0.95, 0.93, 0.88], colorHi: [1.00, 0.99, 0.96], colorLo: [0.78, 0.74, 0.68] },
+  7:  { name: "Ruby",        slug: "ruby",        tagline: "Known for passion, courage, and vital aliveness.",   color: [0.72, 0.10, 0.20], colorHi: [0.96, 0.36, 0.42], colorLo: [0.48, 0.05, 0.12] },
+  8:  { name: "Peridot",     slug: "peridot",     tagline: "Linked to prosperity, joy, and inner strength.",     color: [0.60, 0.76, 0.20], colorHi: [0.84, 0.94, 0.46], colorLo: [0.42, 0.54, 0.10] },
+  9:  { name: "Sapphire",    slug: "sapphire",    tagline: "Embodies truth, loyalty, and sovereign wisdom.",     color: [0.08, 0.22, 0.55], colorHi: [0.30, 0.50, 0.84], colorLo: [0.04, 0.12, 0.36] },
+  10: { name: "Opal",        slug: "opal",        tagline: "Represents creativity, hope, and emotional healing.", color: [0.90, 0.86, 0.80], colorHi: [1.00, 0.96, 0.92], colorLo: [0.72, 0.62, 0.78] },
+  11: { name: "Citrine",     slug: "citrine",     tagline: "Radiates joy, abundance, and warm positivity.",      color: [0.92, 0.66, 0.18], colorHi: [1.00, 0.86, 0.42], colorLo: [0.66, 0.42, 0.08] },
+  12: { name: "Turquoise",   slug: "turquoise",   tagline: "Represents good fortune and spiritual alignment.",   color: [0.20, 0.66, 0.66], colorHi: [0.50, 0.86, 0.86], colorLo: [0.10, 0.42, 0.46] },
+};
+
+/** Resolve a birthstone from a "YYYY-MM-DD" birthday. Returns January's stone
+ *  as a benign default when the date is unparseable, so we never crash the
+ *  whole book over a missing or malformed date. */
+function birthstoneForBirthday(birthday: string | null | undefined): Birthstone {
+  if (!birthday) return BIRTHSTONES[1]!;
+  const m = /^\d{4}-(\d{2})-/.exec(birthday);
+  const month = m ? parseInt(m[1]!, 10) : NaN;
+  return BIRTHSTONES[month] ?? BIRTHSTONES[1]!;
+}
 
 // ── Font loader ──────────────────────────────────────────────────────────────
 
@@ -185,7 +236,11 @@ const STYLES: Record<string, PlaceholderStyle> = {
   BULLET_3:            { weight: "bold",    size: 10,   color: "gold", align: "left",  upper: true, characterSpacing: 0.8, xIndent: 32 },
 
   // Pull quote (recto)
-  PULL_QUOTE: { weight: "italic", size: 16, color: "gold", align: "center", wrapWidth: 320, leading: 1.4 },
+  // Pull-quote is the lone focal element on `03-standard-body-with-quotes`,
+  // so we render it large (20pt) with generous leading and a wider wrap so
+  // each line has visual weight. drawPullQuoteCentered auto-shrinks if a
+  // very long quote runs past MAX_LINES.
+  PULL_QUOTE: { weight: "italic", size: 20, color: "gold", align: "center", wrapWidth: 360, leading: 1.45 },
 
   // Data card
   INTERPRETATION_BODY: { weight: "regular", size: 11, color: "fg", align: "left", wrapWidth: 360, leading: 1.5 },
@@ -228,7 +283,28 @@ const STYLES: Record<string, PlaceholderStyle> = {
 
   // Universal — auto-filled on every page that has these slots
   PAGE_NUMBER: { weight: "italic",  size: 9,  color: "gold", align: "center" },
-  SIGN_GLYPH:  { weight: "display", size: 64, color: "gold", align: "left" },
+  SIGN_GLYPH:  { weight: "display", size: 38, color: "gold", align: "left" },
+
+  // Moon / Rising feature pages (Chapter 3 / Chapter 4). Single-template per
+  // chapter — the sign is filled at render time from order.moonSign /
+  // .risingSign. BOOK_TITLE is the small top-left brand label (matches the
+  // chapter-opener style). ZODIAC_NAME_* is the big centred sign name in the
+  // middle of the page. ZODIAC_GLYPH_* is the small decorative flourish glyph
+  // between the two gold rules near the bottom; drawn via
+  // drawBigCenteredInRect so it occupies the visual space between the rules
+  // even though the widget rect itself is only ~9pt tall.
+  BOOK_TITLE:          { weight: "bold",    size: 9,  color: "gold", align: "left",  upper: true, characterSpacing: 1.5 },
+  ZODIAC_NAME_MOON:    { weight: "display", size: 38, color: "fg",   align: "center", upper: true, characterSpacing: 4, autoShrink: true, minSize: 22 },
+  ZODIAC_NAME_RISING:  { weight: "display", size: 38, color: "fg",   align: "center", upper: true, characterSpacing: 4, autoShrink: true, minSize: 22 },
+  ZODIAC_GLYPH_MOON:   { weight: "display", size: 22, color: "gold", align: "center" },
+  ZODIAC_GLYPH_RISING: { weight: "display", size: 22, color: "gold", align: "center" },
+
+  // Birthstone feature page (Chapter 13). BIRTHSTONE_BODY is a 38pt-tall
+  // caption beneath the gem visual — `drawBirthstoneCaption` lays out the
+  // uppercase stone name (bold, slightly larger) on its own line and the
+  // tagline below it in gold italic, so a single widget hosts two visually
+  // distinct rows of copy.
+  BIRTHSTONE_BODY:     { weight: "italic",  size: 11, color: "fg",   align: "center", wrapWidth: 240, leading: 1.3 },
 };
 
 const DEFAULT_STYLE: PlaceholderStyle = { weight: "regular", size: 11.5, color: "fg", align: "left" };
@@ -740,6 +816,175 @@ async function buildZodiacSignPage(ctx: BuildCtx): Promise<void> {
   await newPageFromTemplate(ctx, "zodiac-sign", file);
 }
 
+/** Chapter 3 (moon) and Chapter 4 (rising) feature page. Single template per
+ *  chapter — the sign is filled at render time from order.moonSign /
+ *  order.risingSign. The template has 4 widgets: BOOK_TITLE (top-left brand
+ *  label), ZODIAC_NAME_{MOON|RISING} (big centred sign name), and
+ *  ZODIAC_GLYPH_{MOON|RISING} (small decorative unicode glyph between the
+ *  bottom gold rules — drawn via drawBigCenteredInRect so a 20pt glyph fits
+ *  the visual band even though the widget rect is only ~9pt tall). */
+async function buildZodiacGlyphPage(ctx: BuildCtx, kind: "moon" | "rising"): Promise<void> {
+  const pageTypeKey: PageTypeKey = kind === "moon" ? "zodiac-moon" : "zodiac-rising";
+  const { page, pageType } = await newPageFromTemplate(ctx, pageTypeKey);
+  if (!pageType) return;
+  const rc: RenderCtx = { page, fonts: ctx.fonts, pageType: pageTypeKey };
+
+  const sign = (kind === "moon" ? ctx.order.moonSign : ctx.order.risingSign) ?? "";
+  const nameField = kind === "moon" ? "ZODIAC_NAME_MOON" : "ZODIAC_NAME_RISING";
+  const glyphField = kind === "moon" ? "ZODIAC_GLYPH_MOON" : "ZODIAC_GLYPH_RISING";
+
+  const bookTitleSlot = getSlot(pageType, "BOOK_TITLE");
+  if (bookTitleSlot) fillSlot(rc, "BOOK_TITLE", bookTitleSlot, "HOLISTIC GROWTH");
+
+  const nameSlot = getSlot(pageType, nameField);
+  if (nameSlot && sign) fillSlot(rc, nameField, nameSlot, sign);
+
+  const glyphSlot = getSlot(pageType, glyphField);
+  if (glyphSlot && sign) {
+    const glyph = ZODIAC_GLYPHS[sign] ?? "";
+    // Fallback to first letter of the sign name when the font can't encode
+    // the unicode zodiac codepoint (Times-Roman fallback is WinAnsi-only;
+    // Cormorant TTFs in fonts/ have full glyph coverage).
+    drawBigCenteredInRect(rc, glyphField, glyphSlot, glyph, sign.charAt(0).toUpperCase());
+  }
+}
+
+/** Chapter 13 (BONUS) birthstone feature page. Resolves the customer's stone
+ *  from their birth month, fills the gem visual into the BIRTHSTONE_IMAGE
+ *  widget (PNG if present, vector gem otherwise), and lays the stone name +
+ *  tagline beneath via `drawBirthstoneCaption`. */
+async function buildBirthstonePage(ctx: BuildCtx, ch: ParsedChapter): Promise<void> {
+  const { page, pageType } = await newPageFromTemplate(ctx, "birthstone");
+  if (!pageType) return;
+  void ch; // chapter shape unused — page identity is the baked "YOUR BIRTHSTONE" header label
+  const rc: RenderCtx = { page, fonts: ctx.fonts, pageType: "birthstone" };
+
+  const stone = birthstoneForBirthday(ctx.order.birthday);
+
+  // CHAPTER_TITLE intentionally left unfilled: the template artwork already
+  // bakes "YOUR BIRTHSTONE" into the top-left of the header band. Filling
+  // the right-hand CHAPTER_TITLE widget with the same label produces a
+  // visible double-header in the rule. (The widget rect is masked anyway
+  // because the renderer's per-slot mask runs only when fillSlot is called.)
+
+  const imgSlot = getSlot(pageType, "BIRTHSTONE_IMAGE");
+  if (imgSlot) await drawBirthstoneImage(ctx, rc, imgSlot, stone);
+
+  const bodySlot = getSlot(pageType, "BIRTHSTONE_BODY");
+  if (bodySlot) drawBirthstoneCaption(rc, bodySlot, stone);
+}
+
+/** Embed a birthstone PNG from disk if available, else draw a vector gem.
+ *  Lookup path: `artifacts/book-templates/birthstones/<slug>.png`. Drop your
+ *  hand-curated gem photos there to upgrade the visual; the page is never
+ *  blank in the absence of a file. */
+async function drawBirthstoneImage(
+  ctx: BuildCtx,
+  rc: RenderCtx,
+  slot: Slot,
+  stone: Birthstone,
+): Promise<void> {
+  // Recover the widget rect from slot.y (which is the AcroForm baseline).
+  const baselineOffset = Math.max(slot.h - 12, 4);
+  const rectY = slot.y - baselineOffset;
+  const cx = slot.x + slot.w / 2;
+  const cy = rectY + slot.h / 2;
+  const radius = Math.min(slot.w, slot.h) / 2 - 4; // leave a tiny gutter for the cream mask
+
+  // Mask the widget background first so a stray default-fill rectangle from
+  // the AcroForm export doesn't show through the gem.
+  maskSlot(rc, slot);
+
+  // Try the PNG path. We resolve relative to TEMPLATES_DIR (templatesDir()
+  // exported from parse.ts) so the file layout matches every other template
+  // asset in the repo.
+  const pngPath = path.join(templatesDir(), "birthstones", `${stone.slug}.png`);
+  const bytes = await fs.readFile(pngPath).catch(() => null);
+  if (bytes) {
+    try {
+      const img = await ctx.out.embedPng(bytes);
+      const size = radius * 2;
+      // Centre the image inside the widget rect.
+      rc.page.drawImage(img, {
+        x: cx - radius,
+        y: cy - radius,
+        width: size,
+        height: size,
+      });
+      return;
+    } catch {
+      // Fall through to the vector gem on any decode failure (corrupt file,
+      // non-PNG bytes, etc.) — never crash a whole book over one bad asset.
+    }
+  }
+
+  // Vector fallback: a filled circle in the stone colour, with a darker
+  // inner ring + a small pearly highlight glint. Reads as a tasteful
+  // talisman gem at marketing-image resolutions.
+  rc.page.drawCircle({
+    x: cx, y: cy, size: radius,
+    color: rgb(stone.color[0], stone.color[1], stone.color[2]),
+  });
+  rc.page.drawCircle({
+    x: cx, y: cy, size: radius * 0.78,
+    borderColor: rgb(stone.colorLo[0], stone.colorLo[1], stone.colorLo[2]),
+    borderWidth: 1.2,
+  });
+  // Highlight glint — small, offset upper-left.
+  rc.page.drawCircle({
+    x: cx - radius * 0.32, y: cy + radius * 0.30, size: radius * 0.18,
+    color: rgb(stone.colorHi[0], stone.colorHi[1], stone.colorHi[2]),
+    opacity: 0.85,
+  });
+}
+
+/** Two-row caption beneath the gem: uppercase stone name (display weight,
+ *  large) on top, italic gold tagline below. Both centred inside the
+ *  BIRTHSTONE_BODY widget rect. */
+function drawBirthstoneCaption(rc: RenderCtx, slot: Slot, stone: Birthstone): void {
+  maskSlot(rc, slot);
+  const baselineOffset = Math.max(slot.h - 12, 4);
+  const rectY = slot.y - baselineOffset;
+  const rectTop = rectY + slot.h;
+  const cx = slot.x + slot.w / 2;
+
+  // Name — bold display, ~17pt, baseline near the top of the rect.
+  const nameSize = 17;
+  const nameFont = pickFont("display", rc.fonts);
+  const nameText = stone.name.toUpperCase();
+  const nameCspace = 3;
+  const nameW = nameFont.widthOfTextAtSize(nameText, nameSize) + nameCspace * (nameText.length - 1);
+  const fg = rgbColor(resolveColor({ color: "fg" } as PlaceholderStyle, rc.pageType));
+  rc.page.drawText(nameText, {
+    x: cx - nameW / 2,
+    y: rectTop - nameSize + 1,
+    size: nameSize,
+    font: nameFont,
+    color: fg,
+    ...(nameCspace ? { characterSpacing: nameCspace } : {}),
+  });
+
+  // Tagline — gold italic, ~10pt, sits ~6pt below the name.
+  const tagSize = 10;
+  const tagFont = pickFont("italic", rc.fonts);
+  const tagText = stone.tagline;
+  const goldColor = rgbColor(GOLD);
+  // Wrap if it gets long (the table values are all short — but be defensive).
+  const lines = wrapText(tagText, tagFont, tagSize, slot.w - 10);
+  let y = rectTop - nameSize - tagSize - 6;
+  for (const line of lines) {
+    const w = tagFont.widthOfTextAtSize(line, tagSize);
+    rc.page.drawText(line, {
+      x: cx - w / 2,
+      y,
+      size: tagSize,
+      font: tagFont,
+      color: goldColor,
+    });
+    y -= tagSize * 1.2;
+  }
+}
+
 async function buildSectionDivider(
   ctx: BuildCtx,
   partNum: string,
@@ -909,14 +1154,24 @@ async function buildStandardBodyFlow(ctx: BuildCtx, ch: ParsedChapter, options?:
       else maskSlot(rc, subSlots[i]!);
     }
 
-    // 3 distinct bullets — never repeat the same line three times.
+    // 3 distinct bullets — never repeat the same line three times. When a
+    // bullet slot has no text, we paint a cream mask tightly centred on the
+    // bullet's baseline (slot.y) to cover the gold ◆ glyph the template
+    // artwork bakes at slot.x. The default ±1pt maskSlot pad only covers
+    // the widget rect (which sits just above the baseline) and leaves the
+    // lower half of the diamond visible. Bullet rows are stacked ~18pt
+    // apart, so the mask height is kept to 16pt to avoid bleeding into the
+    // adjacent bullet row above.
     const bullets = pickThreeBullets(ch);
     for (let i = 0; i < 3; i++) {
       const slot = getSlot(stdBody, `BULLET_${i + 1}`);
       if (!slot) continue;
       const text = bullets[i];
-      if (text) fillSlot(rc, `BULLET_${i + 1}`, slot, text);
-      else maskSlot(rc, slot);
+      if (text) {
+        fillSlot(rc, `BULLET_${i + 1}`, slot, text);
+      } else {
+        drawMaskRect(rc, slot.x - 4, slot.y - 8, slot.w + 8, 16);
+      }
     }
 
     const bodySlots = getSlots(stdBody, "BODY_PARAGRAPH");
@@ -948,23 +1203,20 @@ async function buildStandardBodyFlow(ctx: BuildCtx, ch: ParsedChapter, options?:
 /**
  * Render a pull-quote highlight page.
  *
- * Template layout (03-standard-body-with-quotes):
- *   - Header band (READER_FIRST_NAME, CHAPTER_TITLE)
- *   - SUBSECTION_HEADING band
- *   - Above-quote zone: BODY_PARAGRAPH_1 (top anchor) → ends at quote-band top
- *   - Quote band: two horizontal rules with ★ markers; PULL_QUOTE centered between
- *   - Below-quote zone: BODY_PARAGRAPH_3 (top anchor) → ends at safe bottom
+ * The template (03-standard-body-with-quotes) is intentionally minimal:
+ *   - Header band (READER_FIRST_NAME, CHAPTER_TITLE) with a thin gold rule
+ *   - SUBSECTION_HEADING band just below the rule
+ *   - A large centered PULL_QUOTE field occupying the upper-middle of the page
+ *   - One small gold ornament centered above the quote (part of the template)
+ *   - A two-segment gold rule near the bottom flanking PAGE_NUMBER
  *
- * BODY_PARAGRAPH_2 and _4 are continuation-indent markers in the template
- * design; we ignore their positions and instead flow paragraphs with dynamic
- * stacking inside each zone. Any paragraphs that don't fit on this page are
- * returned so the caller can spill them onto body-continued pages.
+ * There are NO body-paragraph fields on this page — the chapter's body
+ * prose lives entirely on the preceding `02-standard-body` and following
+ * `07-body-continued` pages. This builder ignores any paragraph content
+ * passed in and returns it so the caller can route it elsewhere.
  *
- * The pull quote auto-shrinks (font size + line count) so a long quote
- * stays inside the visible decorative band rather than crashing through it.
- *
- * Returns the number of paragraphs consumed from `paragraphs` so the caller
- * can advance its cursor and emit body-continued pages for any remainder.
+ * Returns `{ consumed: 0, total: paragraphs.length }` — we never consume
+ * body paragraphs here; everything passes through to the caller.
  */
 async function buildPullQuotePage(
   ctx: BuildCtx,
@@ -972,175 +1224,45 @@ async function buildPullQuotePage(
   paragraphs?: string[],
 ): Promise<{ consumed: number; total: number }> {
   const { page, pageType } = await newPageFromTemplate(ctx, "standard-body-with-quotes");
-  if (!pageType) return { consumed: 0, total: 0 };
+  if (!pageType) return { consumed: 0, total: paragraphs?.length ?? 0 };
   const rc: RenderCtx = { page, fonts: ctx.fonts, pageType: "standard-body-with-quotes" };
-
-  // ── Cover the template's decorative band ──────────────────────────────
-  // The user asked to remove the two horizontal gold rules + ★ markers in
-  // the middle of the page (since we place the quote below them, the band
-  // is empty content). Direct row-averaging of the template raster at the
-  // rule positions (skipping the ★ glyph column) shows the surrounding bg
-  // is uniformly `rgb(245, 241, 230)` ± 1 unit — so a strip painted at
-  // EXACTLY that colour, only 2pt tall (just enough to cover the rule's
-  // line thickness), blends invisibly into the surrounding bg.
-  const RULE_BG = rgb(245/255, 241/255, 230/255);
-  const ruleStrip = (x: number, y: number, w: number, h: number) =>
-    page.drawRectangle({ x, y, width: w, height: h, color: RULE_BG });
-  ruleStrip(40, 477, 372, 2); // top rule at y≈478
-  ruleStrip(40, 434, 372, 2); // bottom rule at y≈435
-  // ★ + badge squares centred on glyph positions
-  drawMaskRect(rc, 210, 465, 30, 18);
-  drawMaskRect(rc, 210, 447, 30, 18);
-  // PULL_QUOTE widget rect (the small cream box between the rules)
-  const quoteSlotBg = getSlot(pageType, "PULL_QUOTE");
-  if (quoteSlotBg) drawMaskRect(rc, quoteSlotBg.x - 4, quoteSlotBg.y - 6, quoteSlotBg.w + 8, quoteSlotBg.h + 10);
-  // SUBSECTION_HEADING widget rect (baked cream behind the heading)
-  const subSlotBg = getSlot(pageType, "SUBSECTION_HEADING");
-  if (subSlotBg) drawMaskRect(rc, subSlotBg.x - 2, subSlotBg.y - 6, subSlotBg.w + 4, subSlotBg.h + 8);
 
   const nameSlot = getSlot(pageType, "READER_FIRST_NAME");
   const titleSlot = getSlot(pageType, "CHAPTER_TITLE");
   if (nameSlot) fillSlot(rc, "READER_FIRST_NAME", nameSlot, firstName(ctx.order));
   if (titleSlot) fillSlot(rc, "CHAPTER_TITLE", titleSlot, headerLabel(ch));
 
-  const subSlot = getSlot(pageType, "SUBSECTION_HEADING");
-  const lastSub = ch.subsections[ch.subsections.length - 1];
-  if (subSlot && lastSub?.heading) {
-    fillSlot(rc, "SUBSECTION_HEADING", subSlot, lastSub.heading);
-  }
+  // NOTE: we intentionally do NOT render SUBSECTION_HEADING on this page —
+  // having two italic-gold blocks (heading + quote) reads visually as
+  // "two competing quotes" and confuses the layout. The page is a single
+  // focal pull-quote feature. The SUBSECTION_HEADING widget remains in
+  // the template for future flexibility but stays unfilled.
 
-  const bodySlots = getSlots(pageType, "BODY_PARAGRAPH");
-
-  // ── Pull quote — placed BELOW the template's decorative band ──────────
-  // The template has a fixed pull-quote band at y≈435-478 (two horizontal
-  // gold rules with ★ markers between them). The space between the rules
-  // is only ~43pt — a long quote at readable size needs 80-100pt and
-  // can't fit. Previous attempts tried to MASK the rules with a flat-color
-  // rectangle, but the template's raster has paper-grain texture that no
-  // single RGB value can match, so the mask was always visible as a
-  // "cutoff box" against the textured surroundings.
-  //
-  // The clean fix: position the quote ENTIRELY BELOW the decorative band
-  // (centerY ≈ 365). The band remains visible above the quote as a small
-  // ornament between the subsection heading and the quote text — its
-  // original visual purpose preserved without any masking. Quote text
-  // never intersects the rules or ★ glyphs, so no mask is needed.
   const quoteSlot = getSlot(pageType, "PULL_QUOTE");
   const quoteText = ch.pullQuote ?? ch.lead.split(/(?<=[.!?])\s+/)[0] ?? "";
-  const QUOTE_CENTER_Y = 365; // below the bottom rule at y≈435
-  const quoteExtent = quoteSlot
-    ? drawPullQuoteCentered(rc, quoteText, QUOTE_CENTER_Y)
-    : { topY: 408, bottomY: 322 };
-
-  // ── Source paragraphs (caller may supply, else derive from the chapter) ─
-  const source =
-    paragraphs ??
-    (lastSub?.paragraphs.length
-      ? lastSub.paragraphs
-      : ch.subsections.flatMap((s) => s.paragraphs).slice(-6));
-
-  if (source.length === 0) return { consumed: 0, total: 0 };
-
-  // ── Body zones ─────────────────────────────────────────────────────────
-  // Above-zone sits between the subsection heading and the decorative band
-  // (band top rule is at y≈478). Below-zone sits below the quote.
-  const SAFE_BOTTOM = 45;
-  const PARAGRAPH_GAP = 14;
-  const DECORATIVE_BAND_TOP = 484; // 6pt buffer above top rule at y=478
-  const bodyStyle = resolveStyle("BODY_PARAGRAPH", "standard-body-with-quotes");
-  const leading = bodyStyle.size * (bodyStyle.leading ?? 1.45);
-  const aboveStart = bodySlots[0]?.y ?? 545;
-  const aboveCap = DECORATIVE_BAND_TOP;          // clear top of decorative band
-  const belowStart = quoteExtent.bottomY - leading - 6;
-  const belowCap = SAFE_BOTTOM;
-
-  let consumed = 0;
-  let aboveY: number | null = null;
-
-  // Try to fit at least one paragraph above the quote. We measure its
-  // height by counting wrapped lines; if it doesn't fit, push it to below.
-  if (source[0]) {
-    const lines = wrapText(source[0], pickFont(bodyStyle.weight, ctx.fonts), bodyStyle.size, bodySlots[0]?.w ?? 360);
-    const linesAvailable = Math.max(1, Math.floor((aboveStart - aboveCap) / leading));
-    // Fit only if the paragraph fits cleanly OR we can afford to take just
-    // its top portion (clip with continuation flag).
-    if (lines.length <= linesAvailable) {
-      const { lastBaselineY } = fillFlowingBody(
-        rc,
-        "BODY_PARAGRAPH",
-        bodySlots[0]!,
-        source[0],
-        ctx.manifest.spec.page.heightPt,
-        aboveCap,
-        { startY: aboveStart },
-      );
-      aboveY = lastBaselineY - leading - PARAGRAPH_GAP;
-      consumed = 1;
-    }
+  if (quoteSlot) {
+    // Center the quote vertically in its widget rect.
+    const centerY = quoteSlot.y - quoteSlot.h / 2 + 6;
+    drawPullQuoteCentered(rc, quoteText, centerY);
   }
 
-  // Stack additional paragraphs above the quote while they fit.
-  while (consumed < source.length && aboveY !== null) {
-    const next = source[consumed]!;
-    const lines = wrapText(next, pickFont(bodyStyle.weight, ctx.fonts), bodyStyle.size, bodySlots[0]?.w ?? 360);
-    const linesAvailable = Math.max(0, Math.floor((aboveY - aboveCap) / leading));
-    if (lines.length > linesAvailable || aboveY < aboveCap + leading) break;
-    const { lastBaselineY } = fillFlowingBody(
-      rc,
-      "BODY_PARAGRAPH",
-      bodySlots[0]!,
-      next,
-      ctx.manifest.spec.page.heightPt,
-      aboveCap,
-      { startY: aboveY },
-    );
-    aboveY = lastBaselineY - leading - PARAGRAPH_GAP;
-    consumed++;
-  }
-
-  // ── Below-quote zone — remaining paragraphs stack dynamically ──────────
-  // Only draw whole paragraphs that fit. If a paragraph would clip, stop
-  // and leave it for the caller to render on a body-continued page.
-  const font = pickFont(bodyStyle.weight, ctx.fonts);
-  const wrap = bodySlots[2]?.w ?? 360;
-  let belowY: number | null = null;
-  while (consumed < source.length) {
-    const next = source[consumed]!;
-    const startY = belowY ?? belowStart;
-    if (startY < belowCap + leading) break;
-    const lines = wrapText(next, font, bodyStyle.size, wrap);
-    const heightNeeded = lines.length * leading;
-    if (heightNeeded > startY - belowCap) break;
-    const { lastBaselineY } = fillFlowingBody(
-      rc,
-      "BODY_PARAGRAPH",
-      bodySlots[2]!,
-      next,
-      ctx.manifest.spec.page.heightPt,
-      belowCap,
-      { startY },
-    );
-    belowY = lastBaselineY - leading - PARAGRAPH_GAP;
-    consumed++;
-  }
-
-  return { consumed, total: source.length };
+  // Body paragraphs are not rendered on this page. Pass them through so
+  // the caller can emit body-continued pages with the remaining prose.
+  return { consumed: 0, total: paragraphs?.length ?? 0 };
 }
 
 /**
  * Render the pull quote vertically centered on `centerY`.
  *
- * The template draws two decorative horizontal rules with ★ markers around
- * the quote anchor (top rule ~y=478, bottom rule ~y=448). They're only ~30pt
- * apart, which is too tight for a long quote at readable size — and when
- * the quote crosses into that band, the ★ markers visibly overlap text
- * glyphs. Rather than constraining the quote to that tiny window, we cover
- * the entire decorative band with a cream rectangle and let the quote
- * occupy whatever vertical space it needs.
+ * Visual treatment:
+ *   - Wraps the text in curly typographic double quotes (“ … ”)
+ *   - Renders at the style's preferred size (typically 20pt for prominence)
+ *     and auto-shrinks down toward `minSize` only if the quote runs over
+ *     `MAX_LINES`
+ *   - Draws a small celestial glyph row beneath the quote (✦ ☽ ✦ when the
+ *     font supports the codepoints, falls back to · · · otherwise)
  *
- * The font auto-shrinks from `style.size` down to `minSize` (11pt) until
- * the wrapped quote is at most `MAX_LINES` long. Returns the top/bottom Y
- * of the rendered block so callers can size body zones around it.
+ * Returns the top/bottom Y of the rendered block.
  */
 function drawPullQuoteCentered(
   rc: RenderCtx,
@@ -1151,29 +1273,29 @@ function drawPullQuoteCentered(
   const style = resolveStyle("PULL_QUOTE", rc.pageType);
   const font = pickFont(style.weight, rc.fonts);
   const color = rgbColor(resolveColor(style, rc.pageType));
-  const wrapWidth = style.wrapWidth ?? 320;
-  const MAX_LINES = 6;
-  const minSize = 11;
+  const wrapWidth = style.wrapWidth ?? 360;
+  const MAX_LINES = 8;
+  const minSize = 13;
+
+  // Wrap text in typographic curly double quotes for a "horoscope-magical"
+  // pull-quote feel. Use U+201C and U+201D which Cormorant Garamond and
+  // pdf-lib's standard Times fonts both support.
+  const decorated = `“${text.trim()}”`;
 
   // Shrink until the wrapped text fits in MAX_LINES (or we hit minSize).
   let size = style.size;
   let leading = size * (style.leading ?? 1.4);
-  let lines = wrapText(text, font, size, wrapWidth);
+  let lines = wrapText(decorated, font, size, wrapWidth);
   while (lines.length > MAX_LINES && size > minSize) {
     size -= 0.5;
     leading = size * (style.leading ?? 1.4);
-    lines = wrapText(text, font, size, wrapWidth);
+    lines = wrapText(decorated, font, size, wrapWidth);
   }
 
-  // Block geometry: vertical-center on centerY.
-  const ascender = size * 0.78; // approx cap height in pdf-lib's default metrics
-  const totalHeight = (lines.length - 1) * leading + size; // ascender + last descender
+  // Block geometry: vertical-center on centerY (excluding the glyph row).
+  const ascender = size * 0.78;
+  const totalHeight = (lines.length - 1) * leading + size;
   const baseline0 = centerY + totalHeight / 2 - ascender;
-
-  // No mask needed. The caller (`buildPullQuotePage`) positions the
-  // quote BELOW the template's decorative band (centerY≈365), so the
-  // quote text never intersects the rules or ★ glyphs at y≈435-478.
-  // The band stays visible above the quote as a clean ornament.
 
   const pageWidth = rc.page.getSize().width;
   for (let i = 0; i < lines.length; i++) {
@@ -1183,17 +1305,52 @@ function drawPullQuoteCentered(
     const y = baseline0 - i * leading;
     rc.page.drawText(line, { x, y, size, font, color });
   }
-  // Return the rendered quote's visual extent so callers can size body
-  // zones around it. Add small padding for line ascender/descender.
-  const topY = baseline0 + ascender + 4;
-  const bottomY = baseline0 - (lines.length - 1) * leading - size * 0.25 - 4;
-  return { topY, bottomY };
+
+  // ── Celestial decoration row beneath the quote ────────────────────────
+  // Vector primitives (three small gold filled circles linked by thin
+  // gold lines) so rendering is font-independent. Reads as a small
+  // horoscope-style flourish under the quote.
+  const bottomY = baseline0 - (lines.length - 1) * leading - size * 0.25;
+  const decoY = bottomY - 22;
+  const goldColor = rgbColor(GOLD);
+  const dotR = 1.8;
+  const lineLen = 26;
+  const gap = 6;
+  const totalW = 6 * dotR + 2 * lineLen + 4 * gap;
+  let cursorX = pageWidth / 2 - totalW / 2;
+  const drawDot = () => {
+    rc.page.drawCircle({ x: cursorX + dotR, y: decoY, size: dotR, color: goldColor });
+    cursorX += dotR * 2;
+  };
+  const drawLine = () => {
+    rc.page.drawRectangle({ x: cursorX, y: decoY - 0.3, width: lineLen, height: 0.6, color: goldColor });
+    cursorX += lineLen;
+  };
+  drawDot(); cursorX += gap;
+  drawLine(); cursorX += gap;
+  drawDot(); cursorX += gap;
+  drawLine(); cursorX += gap;
+  drawDot();
+
+  return {
+    topY: baseline0 + ascender + 4,
+    bottomY: decoY - 8,
+  };
 }
 
+/**
+ * Render the affirmation feature page. Accepts an array so pillar chapters
+ * (5/6/7) can show up to 5 affirmations stacked vertically, while Chapter 10
+ * mantra pages pass a single-item array for the time-of-day mantra.
+ *
+ * For multi-item lists we shrink the font size and centre the block
+ * vertically between the template's quote ornament (above) and the
+ * reader-name / placement row (below).
+ */
 async function buildAffirmationPage(
   ctx: BuildCtx,
   ch: ParsedChapter,
-  affirmation: string,
+  affirmations: string[],
   placement: string,
 ): Promise<void> {
   const { page, pageType } = await newPageFromTemplate(ctx, "affirmations");
@@ -1203,10 +1360,88 @@ async function buildAffirmationPage(
   const nSlot = getSlot(pageType, "READER_FIRST_NAME");
   const pSlot = getSlot(pageType, "PLACEMENT_REFERENCE");
   const tSlot = getSlot(pageType, "CHAPTER_TITLE");
-  if (aSlot) fillSlot(rc, "AFFIRMATION_TEXT", aSlot, affirmation || "I am exactly where I need to be.");
+
+  const items = affirmations
+    .filter((s) => s && s.trim().length > 0)
+    .slice(0, 5);
+  if (aSlot && items.length > 0) {
+    drawAffirmationList(rc, aSlot, items);
+  } else if (aSlot) {
+    fillSlot(rc, "AFFIRMATION_TEXT", aSlot, "I am exactly where I need to be.");
+  }
   if (nSlot) fillSlot(rc, "READER_FIRST_NAME", nSlot, firstName(ctx.order));
   if (pSlot) fillSlot(rc, "PLACEMENT_REFERENCE", pSlot, placement);
   if (tSlot) fillSlot(rc, "CHAPTER_TITLE", tSlot, headerLabel(ch));
+}
+
+/**
+ * Stack up to 5 affirmations centred vertically around the AFFIRMATION_TEXT
+ * slot's anchor. For a single item we use the slot's preferred size (~18pt);
+ * for multiple items we shrink so the stack fits between the quote ornament
+ * above and the reader-name row below (roughly y=515 down to y=455 = 60pt).
+ */
+function drawAffirmationList(rc: RenderCtx, slot: Slot, items: string[]): void {
+  const style = resolveStyle("AFFIRMATION_TEXT", rc.pageType);
+  const font = pickFont(style.weight, rc.fonts);
+  const color = rgbColor(resolveColor(style, rc.pageType));
+  const pageWidth = rc.page.getSize().width;
+  // Vertical band: between the decorative 〝〝 ornament (~y=525) and ~15pt
+  // above the READER_FIRST_NAME baseline (~y=435 from the widget rect).
+  // Centre the list around the AFFIRMATION_TEXT anchor (~y=482).
+  const BAND_TOP = 528;
+  const BAND_BOTTOM = 450;
+  const centerY = (BAND_TOP + BAND_BOTTOM) / 2;
+  const bandHeight = BAND_TOP - BAND_BOTTOM;
+
+  // Leading is tight (1.25×) and the inter-item gap is small (0.2× leading)
+  // so a 5-item stack lands at a readable ~11pt rather than the 8-9pt range
+  // the older 0.5× gap forced. Single-item pages keep the style's full
+  // preferred size for the focal-quote layout. Wrap is widened past the
+  // AFFIRMATION_TEXT widget width so a long single-sentence affirmation
+  // stays on one line instead of wrapping to two (which would push the
+  // stack into the SAMPLE row below).
+  const ITEM_LEADING_MULT = 1.25;
+  const INTER_ITEM_GAP_MULT = 0.2;
+  const minSize = items.length === 1 ? style.size : 9.5;
+  const maxSize = style.size;
+  const wrapWidth = items.length > 1 ? 380 : (style.wrapWidth ?? 320);
+  let size = maxSize;
+  let lineGap = 0;
+  let wrapped: string[][] = [];
+  while (size >= minSize) {
+    const leading = size * ITEM_LEADING_MULT;
+    lineGap = leading;
+    wrapped = items.map((t) => wrapText(t, font, size, wrapWidth));
+    const totalLines = wrapped.reduce((sum, ls) => sum + ls.length, 0);
+    const interGap = items.length > 1 ? (items.length - 1) * leading * INTER_ITEM_GAP_MULT : 0;
+    const totalHeight = totalLines * leading + interGap;
+    if (totalHeight <= bandHeight) break;
+    size -= 0.5;
+  }
+
+  // Render stacked, vertically centred.
+  const ascender = size * 0.78;
+  const leading = lineGap;
+  const interGap = items.length > 1 ? leading * INTER_ITEM_GAP_MULT : 0;
+  const totalLines = wrapped.reduce((sum, ls) => sum + ls.length, 0);
+  const totalHeight = totalLines * leading + (items.length > 1 ? (items.length - 1) * interGap : 0);
+  let cursorY = centerY + totalHeight / 2 - ascender;
+  for (let i = 0; i < wrapped.length; i++) {
+    const lines = wrapped[i]!;
+    for (const line of lines) {
+      const w = font.widthOfTextAtSize(line, size);
+      rc.page.drawText(line, {
+        x: pageWidth / 2 - w / 2,
+        y: cursorY,
+        size,
+        font,
+        color,
+      });
+      cursorY -= leading;
+    }
+    if (i < wrapped.length - 1) cursorY -= interGap;
+  }
+  void slot; // slot is referenced by anchor design, not by drawing math
 }
 
 async function buildDataNumerologyPage(ctx: BuildCtx, ch: ParsedChapter): Promise<void> {
@@ -1253,17 +1488,30 @@ async function buildDataNumerologyPage(ctx: BuildCtx, ch: ParsedChapter): Promis
   };
   fillOne("CHAPTER_TITLE", headerLabel(ch));
   fillOne("READER_FIRST_NAME", firstName(order));
-  fillOne("NUMBER", String(number));
-  fillOne("ARCHETYPE_NAME", archetype);
   fillOne("CALCULATION", calc);
   fillOne("SHADOW", lifePathShadow(String(number)));
   fillOne("SIGN", sun);
   fillOne("HOUSE", houseLine);
 
-  // Sign glyph (Unicode zodiac char — may not render if Cormorant subset
-  // doesn't include U+2648-U+2653; the renderer will skip the glyph and the
-  // template's surrounding artwork still reads as the cosmic data card).
-  fillSignGlyph(rc, getSlot(pageType, "SIGN_GLYPH"), signGlyph);
+  // Big glyph slots (NUMBER, SIGN_GLYPH): the widget rects on this template
+  // are sized for the small placeholder text — at our display sizes (40-64pt)
+  // a text drawn at the rect's baseline would overflow upward into the
+  // adjacent card heading. drawBigCenteredInRect centres the glyph
+  // vertically inside its widget rect instead.
+  const numberSlot = getSlot(pageType, "NUMBER");
+  if (numberSlot) drawBigCenteredInRect(rc, "NUMBER", numberSlot, String(number));
+  const glyphSlot = getSlot(pageType, "SIGN_GLYPH");
+  if (glyphSlot && signGlyph) {
+    // Fallback: sign name's first letter (e.g. "L" for Leo) if the embedded
+    // font doesn't have the unicode zodiac codepoint.
+    drawBigCenteredInRect(rc, "SIGN_GLYPH", glyphSlot, signGlyph, sun.charAt(0).toUpperCase());
+  }
+
+  // ARCHETYPE_NAME and INTERPRETATION_BODY_1 widgets in the new template
+  // sit at the same y (~y=350) — drawing both would visibly overlap. The
+  // archetype info is already conveyed by the big NUMBER + CALCULATION
+  // pair in the numerology card, so we skip the standalone archetype.
+  void archetype;
 
   // Multi-occurrence: numerology block (index 0) vs astrology block (index 1)
   const fillByIndex = (name: string, values: string[]) => {
@@ -1288,28 +1536,67 @@ async function buildDataNumerologyPage(ctx: BuildCtx, ch: ParsedChapter): Promis
   }
 }
 
-/** Draw the zodiac glyph if the embedded font supports the codepoint. Falls
- *  back to drawing the sign's first letter (e.g. "L" for Leo) so the slot
- *  isn't blank when the font doesn't have U+2648-U+2653. */
-function fillSignGlyph(rc: RenderCtx, slot: Slot | undefined, glyph: string): void {
-  if (!slot) return;
-  const style = resolveStyle("SIGN_GLYPH", rc.pageType);
+/**
+ * Draw a large glyph (NUMBER, SIGN_GLYPH) **centered vertically inside its
+ * widget rect** — not anchored at slot.y like normal text. The widget rects
+ * on the data-numerology template are sized for the small placeholder text
+ * (8-10pt), so anchoring a 40-64pt glyph at slot.y would push its top edge
+ * well above the rect, overlapping the adjacent card heading. Centering
+ * inside the rect keeps the big glyph within the designer's intended visual
+ * space.
+ *
+ * Falls back to the glyph's first character (e.g. "L" for "Leo") if the
+ * embedded font lacks the codepoint (typical when the optional Cormorant
+ * Garamond TTFs aren't installed and we use Times-Roman fallback).
+ */
+function drawBigCenteredInRect(
+  rc: RenderCtx,
+  styleName: string,
+  slot: Slot,
+  text: string,
+  fallback?: string,
+): void {
+  const style = resolveStyle(styleName, rc.pageType);
   const font = pickFont(style.weight, rc.fonts);
   const size = style.size;
   const color = rgbColor(resolveColor(style, rc.pageType));
-  maskSlot(rc, slot);
-  if (!glyph) return;
-  try {
-    // widthOfTextAtSize throws if any glyph isn't encoded.
-    font.widthOfTextAtSize(glyph, size);
-    rc.page.drawText(glyph, { x: slot.x, y: slot.y, size, font, color });
-  } catch {
-    // Font lacks the zodiac codepoint — fall back to first initial.
-    // (Drop in NotoSansSymbols.ttf into book-templates/fonts to enable the glyph.)
-    const fallback = glyph.slice(0, 1); // unicode chars are 1 codepoint each
-    try { font.widthOfTextAtSize(fallback, size); } catch { return; }
-    rc.page.drawText(fallback, { x: slot.x, y: slot.y, size, font, color });
+
+  // Recover the rect's bottom-left (y) and top from the slot's baseline-y
+  // (slot.y = rect.y + max(rect.h - 12, 4) per rectToSlot).
+  const baselineOffset = Math.max(slot.h - 12, 4);
+  const rectY = slot.y - baselineOffset;          // rect bottom
+  const rectCenterY = rectY + slot.h / 2;         // rect vertical centre
+
+  // Place baseline so the glyph's optical centre lines up with rectCenterY.
+  // For a typical font ascent/descent of 0.78/0.18 of size, the vertical
+  // optical centre sits at baseline + (ascent - descent) / 2.
+  const opticalShift = (size * 0.78 - size * 0.18) / 2;
+  const baseline = rectCenterY - opticalShift;
+
+  // Choose what to draw: the supplied glyph, the optional fallback (e.g.
+  // the sign's first letter for zodiac glyphs), or the glyph's own first
+  // char — whichever the font can encode. Unicode zodiac symbols
+  // (U+264C ♌ etc.) typically aren't in WinAnsi, so without the optional
+  // Cormorant TTFs installed we need the fallback to kick in.
+  const candidates = [text, fallback, text.slice(0, 1)].filter(Boolean) as string[];
+  let display: string | null = null;
+  for (const c of candidates) {
+    try {
+      font.widthOfTextAtSize(c, size);
+      display = c;
+      break;
+    } catch { /* try next */ }
   }
+  if (!display) return;
+
+  // Horizontal position: respect the style's align.
+  let x = slot.x;
+  if (style.align === "center") {
+    const w = font.widthOfTextAtSize(display, size);
+    x = slot.x + slot.w / 2 - w / 2;
+  }
+
+  rc.page.drawText(display, { x, y: baseline, size, font, color });
 }
 
 // ── Helpers for numerology data card ────────────────────────────────────────
@@ -1549,9 +1836,18 @@ async function processRecipe(ctx: BuildCtx, recipe: Recipe, book: ParsedBook): P
   const ch = book.chapters.find((c) => c.number === recipe.chapter);
   if (!ch) return;
   ctx.chapterStarts.set(`chapter:${recipe.chapter}`, ctx.pageNumber + 1);
+  // Track which affirmations call we're on within this chapter so Chapter 10's
+  // three consecutive `affirmations` steps map to morning → midday → evening.
+  // `filter().indexOf(step)` was returning 0 every time (since `step` is the
+  // bare string "affirmations" it finds the first match), so all three pages
+  // rendered the morning mantra.
+  let affirmationIndex = 0;
   for (const step of recipe.templates) {
     if (step === "chapter-opener")            await buildChapterOpener(ctx, ch);
     else if (step === "zodiac-sign")          await buildZodiacSignPage(ctx);
+    else if (step === "zodiac-moon")          await buildZodiacGlyphPage(ctx, "moon");
+    else if (step === "zodiac-rising")        await buildZodiacGlyphPage(ctx, "rising");
+    else if (step === "birthstone")           await buildBirthstonePage(ctx, ch);
     else if (step === "standard-body+")       await buildStandardBodyFlow(ctx, ch);
     else if (step === "standard-body")        await buildStandardBodyFlow(ctx, ch);
     else if (step === "standard-body-with-quotes") await buildPullQuotePage(ctx, ch);
@@ -1559,16 +1855,19 @@ async function processRecipe(ctx: BuildCtx, recipe: Recipe, book: ParsedBook): P
     else if (step === "welcome-letter")       await buildWelcomeLetter(ctx, ch.lead);
     else if (step === "closing-letter")       await buildClosingLetter(ctx, ch.lead);
     else if (step === "affirmations") {
-      // Pillar chapters: signature affirmation. Chapter 10: Morning/Midday/Evening triplets.
+      // Pillar chapters (5/6/7): show the first 5 affirmations as a stacked
+      // list. Chapter 10: each page shows the time-of-day mantra triplet.
       if (ch.number === 10 && ch.mantras) {
-        const slot = recipe.templates.filter((s) => s === "affirmations").indexOf(step);
-        const which = (["morning","midday","evening"] as const)[slot] ?? "morning";
+        const which = (["morning","midday","evening"] as const)[affirmationIndex] ?? "morning";
         const list = ch.mantras[which];
-        await buildAffirmationPage(ctx, ch, list[0] ?? "", which.toUpperCase());
+        await buildAffirmationPage(ctx, ch, list.slice(0, 5), which.toUpperCase());
       } else {
-        const aff = ch.affirmations?.[0] ?? ch.lead.split(/(?<=[.!?])\s+/)[0] ?? "";
-        await buildAffirmationPage(ctx, ch, aff, placementForChapter(ch));
+        const affs = ch.affirmations && ch.affirmations.length > 0
+          ? ch.affirmations.slice(0, 5)
+          : [ch.lead.split(/(?<=[.!?])\s+/)[0] ?? ""];
+        await buildAffirmationPage(ctx, ch, affs, placementForChapter(ch));
       }
+      affirmationIndex++;
     }
     else if (step === "section-divider") {
       // Chapter recipes shouldn't normally include section dividers, but tolerate it.
@@ -1646,6 +1945,151 @@ export async function generateTemplatedInteriorPDF(
   return Buffer.from(bytes);
 }
 
+// ── Hardcover wrap renderer ─────────────────────────────────────────────────
+
+/**
+ * Build the hardcover case-wrap PDF for the printed book. This is a
+ * standalone document — not part of the interior pipeline — sized to the
+ * Lulu US Trade hardcover spec:
+ *
+ *   Total wrap (with bleed): 14.00" × 10.75" → 1008 × 774 pt
+ *   Book hardcover size:      6.25" × 9.50"  (per side of the spread)
+ *   Spine width:              0.25" minimum (varies by page count)
+ *   Wrap area / bleed:        0.625" all around
+ *
+ * The cover template (`00-hardcover-editable.pdf`) has AcroForm widgets at:
+ *   BACK COVER (left half)
+ *     - BOOK_TITLE         "A book written..." subtitle, top of back cover
+ *     - READER_FIRST_NAME  "For [Name]" in the body copy
+ *     - DATE_OF_BIRTH      "born on [date]" in the body copy
+ *     - BIRTH_PLACE        "in [place]" in the body copy
+ *   SPINE (vertical strip in the centre)
+ *     - READER_FIRST_NAME  (rotated 90° — narrow tall rect)
+ *   FRONT COVER (right half)
+ *     - FULL_NAME          big centred name beneath the title
+ *     - DATE_OF_BIRTH      "BORN" line, lower right
+ *     - BIRTH_PLACE        "IN"   line, lower right
+ */
+export async function buildHardcoverWrap(order: ZodiacOrder): Promise<Buffer> {
+  const out = await PDFDocument.create();
+  out.setTitle(`Holistic Growth — ${order.fullName} — Cover Wrap`);
+  out.setAuthor("Holigrowth");
+  const fonts = await loadFonts(out);
+
+  // Embed the template wrap page (1008 × 774 pt).
+  const tplPath = path.join(templatesDir(), "00-hardcover-editable.pdf");
+  const tplBytes = await fs.readFile(tplPath);
+  const tplDoc = await PDFDocument.load(tplBytes);
+  const [embedded] = await out.embedPdf(tplDoc, [0]);
+  if (!embedded) throw new Error("Failed to embed hardcover template");
+  const page = out.addPage([embedded.width, embedded.height]);
+  page.drawPage(embedded, { x: 0, y: 0, width: embedded.width, height: embedded.height });
+
+  // Page bg is midnight purple — text should be cream to read against it.
+  const COVER_CREAM = rgb(0.95, 0.92, 0.78);
+
+  // Helper: draw centred or left-aligned text at a slot rect.
+  const drawAt = (
+    text: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    opts: {
+      size: number;
+      font: PDFFont;
+      align?: "left" | "center";
+      rotate?: number; // degrees, applied around the slot's centre point
+    },
+  ) => {
+    const { size, font, align = "left", rotate } = opts;
+    if (!text) return;
+    const baselineOffset = Math.max(h - 12, 4);
+    const baselineY = y + baselineOffset;
+    const textW = font.widthOfTextAtSize(text, size);
+    let drawX = x;
+    if (align === "center") drawX = x + w / 2 - textW / 2;
+    if (rotate !== undefined) {
+      // Rotated text — draw at slot's bottom-left, rotating around that pivot.
+      // For a 90° rotation (vertical text reading bottom-to-top), shift the
+      // baseline along the rotation axis so the text starts near the bottom
+      // of the tall narrow slot and reads upward.
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      // Draw text centered on the slot; rotation pivot is the bottom-left of
+      // the drawn text. Compute pre-rotation position so post-rotation the
+      // text is centered on the slot.
+      page.drawText(text, {
+        x: cx + size / 3,    // baseline offset along the new axis
+        y: cy - textW / 2,   // centre vertically (post-rotation horizontal)
+        size,
+        font,
+        color: COVER_CREAM,
+        rotate: degrees(rotate),
+      });
+    } else {
+      page.drawText(text, { x: drawX, y: baselineY, size, font, color: COVER_CREAM });
+    }
+  };
+
+  // ── Compute mock-friendly display values ──────────────────────────────
+  const firstName = (order.fullName ?? "").trim().split(/\s+/)[0] ?? "Reader";
+  const fullName = (order.fullName ?? "").trim().toUpperCase() || "READER";
+  const birthDate = formatBirthDate(order.birthday);
+  const birthPlace = (order.birthLocation ?? "").trim();
+
+  // ── Fill widget slots ─────────────────────────────────────────────────
+  // Multiple widgets share the same field name (READER_FIRST_NAME has two
+  // instances, etc.) — pdf-lib returns them in the order they appear in the
+  // form tree, but rather than rely on that ordering we read every widget
+  // rectangle and dispatch by its (x, y) position to the correct treatment.
+  const tplFormDoc = await PDFDocument.load(tplBytes);
+  const tplForm = tplFormDoc.getForm();
+  for (const field of tplForm.getFields()) {
+    const name = field.getName();
+    for (const w of field.acroField.getWidgets()) {
+      const r = w.getRectangle();
+      const isSpine = r.width < 30 && r.height > 60; // narrow tall = spine
+      if (name === "READER_FIRST_NAME" && isSpine) {
+        // Vertical (rotated 90°) reader name on the spine, in cream caps.
+        drawAt(firstName.toUpperCase(), r.x, r.y, r.width, r.height, {
+          size: 9,
+          font: fonts.bold,
+          rotate: 90,
+        });
+      } else if (name === "READER_FIRST_NAME") {
+        drawAt(firstName, r.x, r.y, r.width, r.height, { size: 10, font: fonts.italic });
+      } else if (name === "FULL_NAME") {
+        drawAt(fullName, r.x, r.y, r.width, r.height, { size: 14, font: fonts.bold, align: "center" });
+      } else if (name === "BOOK_TITLE") {
+        drawAt("HOLISTIC GROWTH", r.x, r.y, r.width, r.height, { size: 7, font: fonts.bold });
+      } else if (name === "BIRTH_PLACE") {
+        drawAt(birthPlace, r.x, r.y, r.width, r.height, { size: 9, font: fonts.italic });
+      } else if (name === "DATE_OF_BIRTH") {
+        drawAt(birthDate, r.x, r.y, r.width, r.height, { size: 9, font: fonts.italic });
+      }
+    }
+  }
+
+  // Strip form widgets so the output is flat.
+  const form = out.getForm();
+  for (const f of form.getFields()) {
+    try { form.removeField(f); } catch { /* tolerate malformed entries */ }
+  }
+
+  const bytes = await out.save({ updateFieldAppearances: false });
+  return Buffer.from(bytes);
+}
+
+/** Format a birthday string ("1990-05-15") into "May 15, 1990". */
+function formatBirthDate(birthday: string | null): string {
+  if (!birthday) return "";
+  const d = new Date(birthday);
+  if (Number.isNaN(d.getTime())) return birthday;
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+}
+
 // ── Single-template test renderer ───────────────────────────────────────────
 
 /** Identifiers for `renderSingleTemplate`. Includes both pageType keys and
@@ -1660,7 +2104,11 @@ export type SingleTemplateId =
   | "body-continued"
   | "welcome-letter"
   | "closing-letter"
-  | "body-stress";
+  | "body-stress"
+  | "hardcover"
+  | "zodiac-moon"
+  | "zodiac-rising"
+  | "birthstone";
 
 function mockOrder(overrides?: Partial<ZodiacOrder>): ZodiacOrder {
   const base = {
@@ -1681,7 +2129,6 @@ function mockOrder(overrides?: Partial<ZodiacOrder>): ZodiacOrder {
     luckyNumbers: "3, 7, 14, 21, 33",
     status: "generated",
     generatedContent: null,
-    customAffirmations: null,
     luluOrderId: null,
     luluStatus: null,
     stripeSessionId: null,
@@ -1837,7 +2284,7 @@ export async function renderSingleTemplate(id: SingleTemplateId): Promise<Buffer
       const stressChapter: ParsedChapter = {
         ...mockLongChapter(),
         pullQuote:
-          "The deepest intimacy you will ever experience is the one you build with yourself first — that quiet, unhurried, lifelong conversation in which you stop performing the person you thought you should be and slowly, devotedly, learn the shape of the person you actually are, and choose her on purpose every single day.",
+          "The deepest intimacy you will ever experience is the one you build with yourself first — that quiet, unhurried, lifelong conversation in which you stop performing the person you thought you should be and slowly, devotedly, learn the shape of the person you actually are. Choose her on purpose, every single day, and watch what becomes possible when you finally stop bracing for permission to take up the space that has always been yours.",
         subsections: [
           {
             heading: "The slow, devoted return to yourself",
@@ -1865,10 +2312,18 @@ export async function renderSingleTemplate(id: SingleTemplateId): Promise<Buffer
       await buildDataNumerologyPage(ctx, { ...ch, number: 8, title: "Your Numerological Fortune" });
       break;
     case "affirmations":
+      // Smoke test: render 5 affirmations stacked to exercise the multi-item
+      // layout. Pass a single-element array to test the focal-quote layout.
       await buildAffirmationPage(
         ctx,
         ch,
-        "I trust the quiet wisdom of my own knowing — it has never led me astray.",
+        [
+          "I trust the quiet wisdom of my own knowing — it has never led me astray.",
+          "I am soft enough to be moved, strong enough to stay.",
+          "I belong to my own body and my own becoming.",
+          "I am allowed to want what I want, on the timeline I want it.",
+          "I receive what I have been quietly building toward.",
+        ],
         "Cancer Moon · Life Path 7",
       );
       break;
@@ -1899,6 +2354,22 @@ export async function renderSingleTemplate(id: SingleTemplateId): Promise<Buffer
       // Stress test: long chapter with 5+ subsections, ~25 paragraphs.
       // Spans 1 × standard-body + several body-continued pages.
       await buildStandardBodyFlow(ctx, mockLongChapter());
+      break;
+    case "hardcover":
+      // The hardcover wrap is a standalone PDF at 14×10.75" — not part of
+      // the interior page-type system. Return its bytes directly, bypassing
+      // the per-page interior accumulator.
+      return buildHardcoverWrap(ctx.order);
+    case "zodiac-moon":
+      await buildZodiacGlyphPage(ctx, "moon");
+      break;
+    case "zodiac-rising":
+      await buildZodiacGlyphPage(ctx, "rising");
+      break;
+    case "birthstone":
+      // The mock order's birthday (1990-05-15) lands in May → Emerald.
+      // Swap the mockOrder({ birthday: "..." }) to preview other stones.
+      await buildBirthstonePage(ctx, { ...ch, title: "Your Birthstone", subtitle: "A Talisman Aligned to Your Birth Month" } as ParsedChapter);
       break;
   }
 

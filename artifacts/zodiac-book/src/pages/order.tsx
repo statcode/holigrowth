@@ -377,15 +377,6 @@ export default function Order() {
             </div>
           )}
 
-          {order.customAffirmations && (
-            <div className="mb-8 p-5 rounded-2xl bg-secondary/8 border border-secondary/20 flex items-center gap-4">
-              <Sparkles className="w-6 h-6 text-secondary shrink-0" />
-              <p className="text-sm text-foreground/80">
-                <span className="font-medium text-foreground">Your affirmations are woven in.</span> We've honored your personal mantras throughout your book.
-              </p>
-            </div>
-          )}
-
           <div className="grid md:grid-cols-3 gap-4 mb-10">
             {[
               { icon: Heart, label: "Relationships", color: "text-rose-500", bg: "bg-rose-50 border-rose-100", desc: "Your soul mate blueprint, love languages, and current timing cycles." },
@@ -439,7 +430,7 @@ export default function Order() {
                           </div>
                           <h4 className="font-serif text-lg text-foreground mb-1">The rest is yours — inside the book</h4>
                           <p className="text-xs text-muted-foreground mb-4">
-                            All 12 chapters, your three pillars, lucky numbers, and closing letter are waiting in print.
+                            All 13 chapters, your three pillars, lucky numbers, birthstone talisman, and closing letter are waiting in print.
                           </p>
                           <Button
                             size="sm"
@@ -483,7 +474,7 @@ export default function Order() {
           <div className="text-center bg-muted border border-border p-10 rounded-3xl mb-8">
             <h3 className="text-3xl font-serif mb-3 text-foreground">Print Your Life Path Book</h3>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              All 12 chapters, your three pillars, lucky numbers, affirmations, and monthly forecast — printed in <strong>full color</strong>, beautifully hardbound, and shipped to your door.
+              All 13 chapters, your three pillars, lucky numbers, affirmations, monthly forecast, and BONUS birthstone talisman — printed in <strong>full color</strong>, beautifully hardbound, and shipped to your door.
             </p>
             <div className="flex flex-col items-center gap-4">
               {/* Countdown timer */}
