@@ -1,3 +1,15 @@
+# Cloudways' default vhost on Apache 2.4 doesn't auto-grant access to a
+# webroot moved into a subdirectory like /dist. Without this, every request
+# 401s with "client denied by server configuration" (mod_authz_core),
+# which Cloudways' default error document presents as {"error":"Unauthorized"}.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
+# Make sure index.html is the directory default (Cloudways' vhost only
+# lists index.php by default, which doesn't exist in this SPA build).
+DirectoryIndex index.html
+
 RewriteEngine On
 
 # Tell the Node backend the original public host + scheme. The expr= prefix
