@@ -43,6 +43,11 @@ export default function Order() {
   const [keepWaiting, setKeepWaiting] = useState(false);
   const [generationStage, setGenerationStage] = useState<"writing" | "pdf" | "upload" | "done">("writing");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // Parallel-generation progress: how many of the book's sections (welcome
+  // + 13 chapters + closing = 15) have been written so far, plus a rolling
+  // list of titles for the loader's checkmark list.
+  const [sectionsTotal, setSectionsTotal] = useState(0);
+  const [sectionsCompleted, setSectionsCompleted] = useState<{ key: string; title: string }[]>([]);
   const streamStarted = useRef(false);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -118,6 +123,8 @@ export default function Order() {
     setGenerationStage("writing");
     setIsReconnecting(false);
     setElapsedSeconds(0);
+    setSectionsTotal(0);
+    setSectionsCompleted([]);
     streamStarted.current = false;
     streamStarted.current = true;
     setIsGenerating(true);
@@ -141,6 +148,16 @@ export default function Order() {
         // 12 minute hard timeout — server takes up to ~8 min for large books
         signal: AbortSignal.timeout(12 * 60 * 1000),
       });
+
+      // 409 = another generation is already running for this order (the user
+      // closed and reopened the tab while the AI was still streaming, or two
+      // /preview tabs are open). The in-flight job will finish and flip
+      // status to `generated` on its own — drop the live stream and let the
+      // 3-second order-polling drive the UI to completion.
+      if (response.status === 409) {
+        setIsReconnecting(true);
+        return;
+      }
 
       if (!response.body) throw new Error("No response body");
       const reader = response.body.getReader();
@@ -169,6 +186,16 @@ export default function Order() {
             const data = JSON.parse(dataStr);
             if (data.keepalive) continue;
             if (data.content) setStreamedText((prev) => prev + data.content);
+            // Parallel-generation progress events:
+            //   { stage: "writing", totalSections: 15 }                       — initial
+            //   { stage: "writing", sectionComplete: { n, total, key, title } } — per chapter
+            if (typeof data.totalSections === "number") setSectionsTotal(data.totalSections);
+            if (data.sectionComplete?.key && data.sectionComplete?.title) {
+              const { key, title } = data.sectionComplete;
+              setSectionsCompleted((prev) =>
+                prev.some((s) => s.key === key) ? prev : [...prev, { key, title }],
+              );
+            }
             if (data.stage === "pdf") setGenerationStage("pdf");
             if (data.stage === "upload") setGenerationStage("upload");
             if (data.done) {
@@ -302,9 +329,12 @@ export default function Order() {
       <CosmicLoader
         name={order.fullName}
         location={order.birthLocation}
+        email={order.email ?? undefined}
         stage={generationStage}
         streamedText={streamedText}
         elapsedSeconds={elapsedSeconds}
+        sectionsTotal={sectionsTotal}
+        sectionsCompleted={sectionsCompleted}
         isReconnecting={isReconnecting}
         timedOut={isTimedOut && !keepWaiting}
         onRetry={handleRetry}

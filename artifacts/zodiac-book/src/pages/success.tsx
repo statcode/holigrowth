@@ -112,6 +112,9 @@ export default function Success() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [streamedText, setStreamedText] = useState("");
   const [generationStage, setGenerationStage] = useState<"writing" | "pdf" | "upload" | "done">("writing");
+  // Parallel-generation progress — see order.tsx for the matching state.
+  const [sectionsTotal, setSectionsTotal] = useState(0);
+  const [sectionsCompleted, setSectionsCompleted] = useState<{ key: string; title: string }[]>([]);
   const streamStarted = useRef(false);
 
   const { data: order } = useGetZodiacOrder(id, {
@@ -150,6 +153,13 @@ export default function Success() {
         headers: { "Content-Type": "application/json" },
       });
 
+      // 409 = another generation already in progress for this order. Keep
+      // the loader on screen and let the polling effect detect when status
+      // flips to `generated`. See order.tsx for the equivalent branch.
+      if (response.status === 409) {
+        return;
+      }
+
       if (!response.ok || !response.body) {
         setIsGenerating(false);
         return;
@@ -173,7 +183,17 @@ export default function Success() {
             const event = JSON.parse(line.slice(6));
             if (event.content) {
               setStreamedText((t) => t + event.content);
-            } else if (event.stage === "pdf") {
+            }
+            if (typeof event.totalSections === "number") {
+              setSectionsTotal(event.totalSections);
+            }
+            if (event.sectionComplete?.key && event.sectionComplete?.title) {
+              const { key, title } = event.sectionComplete;
+              setSectionsCompleted((prev) =>
+                prev.some((s) => s.key === key) ? prev : [...prev, { key, title }],
+              );
+            }
+            if (event.stage === "pdf") {
               setGenerationStage("pdf");
             } else if (event.stage === "upload") {
               setGenerationStage("upload");
@@ -207,8 +227,11 @@ export default function Success() {
       <CosmicLoader
         name={order.fullName}
         location={order.birthLocation}
+        email={order.email ?? undefined}
         stage={generationStage}
         streamedText={streamedText}
+        sectionsTotal={sectionsTotal}
+        sectionsCompleted={sectionsCompleted}
       />
     );
   }

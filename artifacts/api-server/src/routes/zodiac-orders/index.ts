@@ -18,7 +18,7 @@ import {
 
 import { streamChatCompletion } from "../../lib/openrouterClient";
 import { logger } from "../../lib/logger";
-import { generateZodiacPrompt, extractZodiacMetadata } from "./astrology";
+import { getBookSections, extractZodiacMetadata } from "./astrology";
 import { submitBookToLulu, getLuluOrderStatus, registerLuluWebhook } from "./lulu";
 import { sendBookReadyEmail, sendGenerationStuckEmail } from "./mailerlite";
 import { generateInteriorPDF, generateCoverPDF, estimatePageCount } from "./pdfGenerator";
@@ -249,6 +249,19 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
     return;
   }
 
+  // Guardrail: a customer who closes the /preview tab and comes back while
+  // the AI is still streaming would otherwise re-trigger /generate, kicking
+  // off a second parallel OpenRouter call against the same order. Block it
+  // and let the client poll the status row instead — the in-flight job will
+  // finish and flip status to `generated` on its own.
+  if (order.status === "generating") {
+    res.status(409).json({
+      error: "Already generating — your book is being written. Poll /api/zodiac-orders/:id for status.",
+      status: "generating",
+    });
+    return;
+  }
+
   // Mark as generating
   await db
     .update(zodiacOrdersTable)
@@ -269,29 +282,53 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
   }, 20_000);
 
   try {
-    const prompt = generateZodiacPrompt(order);
     const systemPrompt = await loadBookSystemPrompt();
-    let fullContent = "";
+    const sections = getBookSections(order);
+    const model = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 
-    const stream = streamChatCompletion({
-      model: process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini",
-      maxTokens: 4096,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
+    // Tell the client how many sections to expect so the loader can show
+    // a progress bar / "n of N" count.
+    res.write(`data: ${JSON.stringify({ stage: "writing", totalSections: sections.length })}\n\n`);
 
-    for await (const content of stream) {
-      fullContent += content;
-      res.write(`data: ${JSON.stringify({ content })}\n\n`);
-    }
+    /** Run a single section's AI call to completion and emit a progress
+     *  event when it finishes. Returns the original index so we can stitch
+     *  the chapters in book order regardless of completion order. */
+    const runSection = async (section: typeof sections[number], idx: number, completedRef: { n: number }): Promise<{ idx: number; key: string; text: string }> => {
+      const stream = streamChatCompletion({
+        model,
+        maxTokens: 4096,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: section.userPrompt },
+        ],
+      });
+      let text = "";
+      for await (const chunk of stream) text += chunk;
+      completedRef.n += 1;
+      // Emit progress as each chapter resolves. Multiple sections finish
+      // concurrently — `n` here is the COUNT of completed sections, not
+      // the index, so the UI's count never goes backwards.
+      res.write(`data: ${JSON.stringify({
+        stage: "writing",
+        sectionComplete: {
+          n: completedRef.n,
+          total: sections.length,
+          key: section.key,
+          title: section.title,
+        },
+      })}\n\n`);
+      return { idx, key: section.key, text: text.trim() };
+    };
+
+    const completedRef = { n: 0 };
+    const results = await Promise.all(
+      sections.map((section, idx) => runSection(section, idx, completedRef)),
+    );
+
+    // Stitch in book order (Promise.all preserves input order, but sort
+    // defensively in case future code switches to Promise.allSettled).
+    results.sort((a, b) => a.idx - b.idx);
+    const fullContent = results.map((r) => r.text).join("\n\n");
 
     // Extract metadata from the generated content
     const metadata = extractZodiacMetadata(order.fullName, order.birthday, order.birthTime, order.birthLocation);

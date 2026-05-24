@@ -160,6 +160,221 @@ function birthMonthName(birthday: string): string {
   return MONTH_NAMES[month - 1] ?? "January";
 }
 
+/**
+ * A single AI-generated unit of the book. The /generate route runs one
+ * OpenRouter call per section in parallel (Promise.all), then stitches
+ * the results in this order to produce the full markdown that
+ * parse.ts → render.ts consumes.
+ *
+ * `key` is a stable id used in the SSE progress events sent to the
+ * frontend, `title` is the human-readable label the CosmicLoader shows,
+ * and `userPrompt` is the complete user-message that pairs with
+ * `book-prompt.md` (system prompt) for that one call.
+ */
+export interface BookSection {
+  key: string;
+  title: string;
+  userPrompt: string;
+}
+
+/** Builds the shared birth-context block prepended to every section
+ *  prompt. Includes name, birth data, calculated astrology + numerology,
+ *  pronoun guidance, and the formatting reminder so each parallel call
+ *  has the same anchoring information. */
+function buildSharedHeader(order: ZodiacOrder): string {
+  const metadata = extractZodiacMetadata(order.fullName, order.birthday, order.birthTime, order.birthLocation);
+  const destinyNumber = getDestinyNumber(order.fullName);
+  const soulUrgeNumber = getSoulUrgeNumber(order.fullName);
+  const personalYear = getPersonalYearNumber(order.birthday);
+
+  const isFemale = order.gender !== "male";
+  const pronoun = isFemale ? "her" : "his";
+  const pronounSub = isFemale ? "she" : "he";
+  const pronounObj = isFemale ? "her" : "him";
+
+  const orientationLabel: Record<string, string> = {
+    straight: "heterosexual / straight",
+    gay: "gay / lesbian",
+    bisexual: "bisexual",
+    prefer_not_to_say: "not specified",
+  };
+  const relationshipLabel: Record<string, string> = {
+    single: "single",
+    in_relationship: "in a relationship",
+    married: "married",
+    divorced: "divorced",
+    widowed: "widowed",
+    not_seeking: "not seeking a relationship",
+  };
+  const orientation = order.sexualOrientation
+    ? (orientationLabel[order.sexualOrientation] ?? order.sexualOrientation)
+    : "not specified";
+  const relStatus = order.relationshipStatus
+    ? (relationshipLabel[order.relationshipStatus] ?? order.relationshipStatus)
+    : "not specified";
+
+  return `You are writing ONE section of ${order.fullName}'s personalised "Holistic Growth Life Path" book. Other sections are being generated in parallel by other workers — write only the section described below, and do NOT include any other chapters.
+
+Birth Details:
+- Full Name: ${order.fullName}
+- Gender: ${order.gender ?? "not specified"}
+- Sexual Orientation: ${orientation}
+- Relationship Status: ${relStatus}
+- Birthday: ${order.birthday}
+- Birth Time: ${order.birthTime}
+- Birth Location: ${order.birthLocation}
+
+Calculated Astrological & Numerological Profile:
+- Sun Sign: ${metadata.sunSign}
+- Moon Sign: ${metadata.moonSign}
+- Rising Sign: ${metadata.risingSign}
+- Life Path Number: ${metadata.lifePath}
+- Destiny Number: ${destinyNumber}
+- Soul Urge Number: ${soulUrgeNumber}
+- Personal Year Number (${new Date().getFullYear()}): ${personalYear}
+- Lucky Numbers: ${metadata.luckyNumbers}
+
+Use pronouns ${pronounSub}/${pronoun}/${pronounObj} throughout. Address ${order.fullName} by name frequently. Use "# " for the chapter heading (one only). Use "## " for sub-section headings inside the chapter.`;
+}
+
+/** Shared guideline tail appended to every section prompt — covers tone,
+ *  specificity, and the pull-quote requirement that closes each chapter. */
+const SHARED_FOOTER = `
+
+IMPORTANT:
+- Output ONLY this one section. Do NOT introduce a preface, do NOT write any other chapters.
+- Be specific to the reader's chart — never use generic horoscope-style language.
+- Warm, empowering, mystical-yet-grounded prose.
+- End the section with one \`> ...\` blockquote pull quote on its own line (single sentence, 120–280 chars, second person, no name).`;
+
+/**
+ * Builds the ordered list of sections for the book. Each section's
+ * `userPrompt` is a self-contained instruction that the parallel
+ * coordinator pairs with `book-prompt.md` (the system prompt) to
+ * generate just that one section. The order here is the order the
+ * sections will appear in the final book.
+ */
+export function getBookSections(order: ZodiacOrder): BookSection[] {
+  const metadata = extractZodiacMetadata(order.fullName, order.birthday, order.birthTime, order.birthLocation);
+  const destinyNumber = getDestinyNumber(order.fullName);
+  const soulUrgeNumber = getSoulUrgeNumber(order.fullName);
+  const personalYear = getPersonalYearNumber(order.birthday);
+  const birthstone = birthstoneForBirthday(order.birthday);
+  const birthMonth = birthMonthName(order.birthday);
+
+  const isFemale = order.gender !== "male";
+  const pronoun = isFemale ? "her" : "his";
+  const pronounSub = isFemale ? "she" : "he";
+  const pronounObj = isFemale ? "her" : "him";
+  const pronounPoss = isFemale ? "her" : "his";
+
+  const orientationLabel: Record<string, string> = {
+    straight: "heterosexual / straight",
+    gay: "gay / lesbian",
+    bisexual: "bisexual",
+    prefer_not_to_say: "not specified",
+  };
+  const relationshipLabel: Record<string, string> = {
+    single: "single",
+    in_relationship: "in a relationship",
+    married: "married",
+    divorced: "divorced",
+    widowed: "widowed",
+    not_seeking: "not seeking a relationship",
+  };
+  const orientation = order.sexualOrientation ? (orientationLabel[order.sexualOrientation] ?? order.sexualOrientation) : "not specified";
+  const relStatus = order.relationshipStatus ? (relationshipLabel[order.relationshipStatus] ?? order.relationshipStatus) : "not specified";
+
+  const header = buildSharedHeader(order);
+  const wrap = (directive: string): string => `${header}\n\n${directive}${SHARED_FOOTER}`;
+
+  return [
+    {
+      key: "welcome",
+      title: "Welcome Letter",
+      userPrompt: wrap(`Write the **Welcome Letter** for the start of the book. ~200–300 words. Format the heading exactly as "# Welcome".\n\nA heartfelt opening addressed by name from Holistic Growth. Set the warm, intimate tone for the book. Include a short disclaimer that this reading is for entertainment and self-reflection only — not a substitute for professional medical, financial, legal, or psychological advice. End with one \`> ...\` pull quote.`),
+    },
+    {
+      key: "ch1",
+      title: "Chapter 1 — Your Life Path Overview",
+      userPrompt: wrap(`# Chapter 1: Your Holistic Growth Life Path — The Overview\nWrite 450–550 words across 3 paragraphs. Introduce ${order.fullName}'s unique cosmic blueprint. Explain Life Path ${metadata.lifePath} as ${pronounPoss} guiding thread, ${pronounPoss} soul's mission and karmic gifts. Weave in Sun (${metadata.sunSign}), Moon (${metadata.moonSign}), and Rising (${metadata.risingSign}). End with a direct, loving message to ${order.fullName}.`),
+    },
+    {
+      key: "ch2",
+      title: `Chapter 2 — Your ${metadata.sunSign} Sun`,
+      userPrompt: wrap(`# Chapter 2: Your Sun Sign — ${metadata.sunSign}\nWrite 350–450 words across 3 paragraphs. Cover ${pronounPoss} ${metadata.sunSign} core identity, natural gifts, shadow patterns, and elemental energy. Briefly connect to love, wealth, and health.`),
+    },
+    {
+      key: "ch3",
+      title: `Chapter 3 — Your ${metadata.moonSign} Moon`,
+      userPrompt: wrap(`# Chapter 3: Your Moon Sign — ${metadata.moonSign}\nWrite 350–450 words across 3 paragraphs. Cover ${pronounPoss} emotional inner world, what ${pronounSub} needs to feel safe, ${pronounPoss} intuitive gifts, and patterns to heal.`),
+    },
+    {
+      key: "ch4",
+      title: `Chapter 4 — Your ${metadata.risingSign} Rising`,
+      userPrompt: wrap(`# Chapter 4: Your Rising Sign — ${metadata.risingSign}\nWrite 300–400 words across 2 paragraphs. Cover how the world perceives ${pronounObj}, ${pronounPoss} social mask, and how ${metadata.risingSign} Rising interacts with ${pronounPoss} Sun and Moon.`),
+    },
+    {
+      key: "ch5",
+      title: "Chapter 5 — Love & Relationships",
+      userPrompt: wrap(`# Chapter 5: Love & Relationships — Your Cosmic Blueprint for Connection\nWrite 500–600 words across 3–4 paragraphs. This is the most personal chapter. Cover:\n- Sexual orientation is ${orientation} — write relationship guidance accurately reflecting who ${pronounSub} is attracted to (same-sex, opposite-sex, or both). Never assume heterosexuality unless specified.\n- Relationship status is ${relStatus} — tailor the love guidance accordingly. If single: focus on attracting and recognizing the right partner. If in a relationship/married: focus on deepening and sustaining connection. If divorced/widowed: focus on healing, self-love, and readiness for new love. If not seeking: focus on self-love, platonic connections, and fulfillment outside romance.\n- How ${pronounPoss} ${metadata.sunSign}/${metadata.moonSign} combination shapes love and attachment\n- The qualities ${pronounSub} attracts and karmic relationship lessons\n- What ${pronounSub} truly needs from a partner; Personal Year ${personalYear} love timing\n- Practical guidance for ${pronounPoss} relationships right now given ${pronounPoss} current status\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Relationship Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign}/${metadata.moonSign} combination, sexual orientation (${orientation}), and current relationship status (${relStatus}). Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific situation — not generic platitudes.`),
+    },
+    {
+      key: "ch6",
+      title: "Chapter 6 — Wealth & Abundance",
+      userPrompt: wrap(`# Chapter 6: Wealth & Abundance — Your Cosmic Path to Prosperity\nWrite 500–600 words across 3–4 paragraphs:\n- Life Path ${metadata.lifePath} wealth archetype; natural gifts and money blind spots for ${metadata.sunSign}\n- Destiny Number ${destinyNumber} and abundance beliefs to reprogram\n- Best aligned income paths; Personal Year ${personalYear} financial timing\n- Two practical abundance practices for ${pronounPoss} signs\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Wealth Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, Destiny Number ${destinyNumber}, ${metadata.sunSign} money archetype, and Personal Year ${personalYear} timing.`),
+    },
+    {
+      key: "ch7",
+      title: "Chapter 7 — Health & Vitality",
+      userPrompt: wrap(`# Chapter 7: Health & Vitality — Your Body's Cosmic Code\nWrite 500–600 words across 3–4 paragraphs:\n- Body zones and energy systems linked to ${metadata.sunSign}, ${metadata.moonSign}, ${metadata.risingSign}\n- What drains vs. replenishes ${pronounObj}; stress patterns and seasonal rhythms\n- Two mind-body practices designed for ${pronounPoss} cosmic blueprint\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Health Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s ${metadata.sunSign} body zones, ${metadata.moonSign} emotional-body needs, and ${metadata.risingSign} energetic patterns.`),
+    },
+    {
+      key: "ch8",
+      title: "Chapter 8 — Numerological Fortune",
+      userPrompt: wrap(`# Chapter 8: Your Numerological Fortune — Lucky Numbers & Timing\nWrite 500–600 words. Interpret each number concisely:\n- Life Path ${metadata.lifePath}: spiritual and practical meaning\n- Destiny Number ${destinyNumber}: ${pronounPoss} outer calling; Soul Urge ${soulUrgeNumber}: ${pronounPoss} heart's desire\n- Personal Year ${personalYear} (${new Date().getFullYear()}): key themes across all three pillars\n- Lucky Numbers ${metadata.luckyNumbers}: when and how to use them; lucky days and timing windows`),
+    },
+    {
+      key: "ch9",
+      title: "Chapter 9 — Planetary Influences",
+      userPrompt: wrap(`# Chapter 9: Planetary Influences & Cosmic Timing\nWrite 400–500 words across 3 paragraphs. Key natal placements (Sun, Moon, Rising ruler). Current transits activating ${pronounPoss} chart. How timing affects ${pronounPoss} three pillars this year.`),
+    },
+    {
+      key: "ch10",
+      title: "Chapter 10 — Your Daily Mantras",
+      userPrompt: wrap(`# Chapter 10: Your Daily Mantras\nWrite 300–400 words. Open with one short paragraph (3–4 sentences) on how to use a mantra — pair it with breath, repeat silently in transit, on a walk, before sleep. Then list exactly 9 mantras under three subheadings — "## Morning" (3 mantras), "## Midday" (3 mantras), "## Evening" (3 mantras) — one per line. Each mantra: 3–7 words, first person, rooted in Life Path ${metadata.lifePath}, ${metadata.sunSign} energy, and Personal Year ${personalYear}. Say-aloud language, not flowery prose.`),
+    },
+    {
+      key: "ch11",
+      title: "Chapter 11 — Sacred Morning Ritual",
+      userPrompt: wrap(`# Chapter 11: Your Sacred Morning Ritual\nWrite 350–450 words. A concise step-by-step morning practice (8–10 minutes) for ${order.fullName}'s chart: breath sequence, affirmation, visualization for Life Path ${metadata.lifePath}, grounding movement for ${metadata.sunSign}.`),
+    },
+    {
+      key: "ch12",
+      title: "Chapter 12 — Your Year Ahead",
+      userPrompt: wrap(`# Chapter 12: Your Year Ahead — Month by Month Guidance\nWrite 1–2 sentences for EACH of the 12 months. Format EXACTLY as shown (each month on its own line):\n\nJanuary: [1–2 sentences on relationships, wealth, or health energy]\nFebruary: [1–2 sentences]\nMarch: [1–2 sentences]\nApril: [1–2 sentences]\nMay: [1–2 sentences]\nJune: [1–2 sentences]\nJuly: [1–2 sentences]\nAugust: [1–2 sentences]\nSeptember: [1–2 sentences]\nOctober: [1–2 sentences]\nNovember: [1–2 sentences]\nDecember: [1–2 sentences]`),
+    },
+    {
+      key: "ch13",
+      title: `Chapter 13 (BONUS) — ${birthstone.name}`,
+      userPrompt: wrap(`# Chapter 13 (BONUS): Your Birthstone — A Talisman Aligned to Your Birth Month\n${order.fullName} was born in ${birthMonth}, so ${pronoun} birthstone is **${birthstone.name}** — traditionally associated with ${birthstone.meaning}. Do not propose an alternate stone.\n\nWrite 500–700 words in this order:\n1. Open by naming ${pronounPoss} birth month and ${birthstone.name} in one warm welcoming sentence (no list, no headers in the opener).\n2. Tell the lore in 2–3 sentences — the stone's traditional symbolism, who valued it historically, what it was believed to protect or attract. Stay grounded; no occult guarantees.\n3. Connect ${birthstone.name} to ${pronounPoss} chart in 3–4 sentences. Be specific: name how the stone resonates with ${metadata.sunSign} Sun, ${metadata.moonSign} Moon, or ${metadata.risingSign} Rising, and how it amplifies Life Path ${metadata.lifePath}.\n4. Offer exactly two practical carry-practices — short, sensory, achievable. Examples: wearing the stone during a specific moon phase, placing it on a journal during morning ritual, holding it while repeating one of ${pronounPoss} affirmations from Chapters 5/6/7.\n\nNo alternate stones, no horoscope generalisations, no list-and-dump of facts.`),
+    },
+    {
+      key: "closing",
+      title: "Closing — A Love Letter from the Universe",
+      userPrompt: wrap(`Write the **Closing letter** from the cosmos to ${order.fullName}. ~300–400 words. Format the heading exactly as "# Closing: A Love Letter from the Universe".\n\nA deeply moving, personally addressed closing. Reference ${pronounPoss} Sun ${metadata.sunSign}, Moon ${metadata.moonSign}, Rising ${metadata.risingSign}, Life Path ${metadata.lifePath}, and Personal Year ${personalYear}. End with ${pronounPoss} lucky numbers (${metadata.luckyNumbers}) as a blessing. Close with the sign-off: *With celestial love and wisdom, The Universe.*`),
+    },
+  ];
+}
+
+/**
+ * Legacy single-prompt builder — retained for callers that want one big
+ * AI request instead of the parallel-per-section approach. The /generate
+ * route uses `getBookSections` now; this remains for the in-tree
+ * smoke-test script and any external integration.
+ *
+ * @deprecated prefer `getBookSections(order)` + a parallel coordinator
+ */
 export function generateZodiacPrompt(order: ZodiacOrder): string {
   const metadata = extractZodiacMetadata(order.fullName, order.birthday, order.birthTime, order.birthLocation);
   const destinyNumber = getDestinyNumber(order.fullName);

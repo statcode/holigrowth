@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Check, WifiOff, RefreshCw, Clock } from "lucide-react";
+import { Sparkles, Check, WifiOff, RefreshCw, Clock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function StarField() {
@@ -141,12 +141,18 @@ function TimeoutScreen({ name, elapsedSeconds, onRetry, onKeepWaiting }: {
   );
 }
 
-export function CosmicLoader({ name, location, stage, streamedText, elapsedSeconds = 0, isReconnecting = false, timedOut = false, onRetry, onKeepWaiting }: {
+export function CosmicLoader({ name, location, email, stage, streamedText, elapsedSeconds = 0, sectionsTotal = 0, sectionsCompleted = [], isReconnecting = false, timedOut = false, onRetry, onKeepWaiting }: {
   name: string;
   location: string;
+  email?: string;
   stage: "writing" | "pdf" | "upload" | "done";
   streamedText: string;
   elapsedSeconds?: number;
+  /** Total sections the backend will generate (welcome + 13 chapters +
+   *  closing = 15). Populated by the initial SSE event; 0 until then. */
+  sectionsTotal?: number;
+  /** Sections the backend has finished, in completion order. */
+  sectionsCompleted?: { key: string; title: string }[];
   isReconnecting?: boolean;
   timedOut?: boolean;
   onRetry?: () => void;
@@ -222,6 +228,68 @@ export function CosmicLoader({ name, location, stage, streamedText, elapsedSecon
                   </motion.div>
                 )}
               </div>
+
+              {/* Persistent "you can close this tab" reassurance — eases
+                  the anxiety of a long generation by surfacing the email
+                  the customer will get when the book is ready. Falls back
+                  to a generic line when we don't have the address yet
+                  (very rare — order.email is set at /create submission). */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="mb-5 px-4 py-2.5 rounded-2xl bg-white/4 border border-white/10 flex items-center gap-2.5 max-w-md"
+              >
+                <Mail className="w-4 h-4 text-[#c9a84c]/80 shrink-0" />
+                <p className="text-white/65 text-xs leading-relaxed">
+                  {email ? (
+                    <>You can close this tab safely — we'll email <span className="text-white/90 font-medium">{email}</span> the moment your book is ready (≈ 5 min).</>
+                  ) : (
+                    <>You can close this tab safely — we'll email you the moment your book is ready (≈ 5 min).</>
+                  )}
+                </p>
+              </motion.div>
+
+              {/* Parallel-generation progress — only renders during the
+                  writing stage and once the backend has told us the total.
+                  Shows a live count and the last 4 completed section
+                  titles with checkmarks, which makes the wait feel
+                  productive ("ok, my book is actually being written")
+                  instead of a static spinner. */}
+              {stage === "writing" && sectionsTotal > 0 && (
+                <div className="mb-6 w-full max-w-md">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <span className="text-[#c9a84c]/80 text-[10px] tracking-[0.25em] uppercase">Chapters written</span>
+                    <span className="text-[#c9a84c] text-xs font-mono tabular-nums">{sectionsCompleted.length} / {sectionsTotal}</span>
+                  </div>
+                  <div className="h-1 rounded-full bg-white/8 overflow-hidden">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-[#c9a84c]/70 to-[#c9a84c]"
+                      animate={{ width: `${(sectionsCompleted.length / sectionsTotal) * 100}%` }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                    />
+                  </div>
+                  {sectionsCompleted.length > 0 && (
+                    <ul className="mt-3 space-y-1.5">
+                      <AnimatePresence initial={false}>
+                        {sectionsCompleted.slice(-4).map((s) => (
+                          <motion.li
+                            key={s.key}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.35 }}
+                            className="flex items-center gap-2 text-white/60 text-xs"
+                          >
+                            <Check className="w-3 h-3 text-[#c9a84c]/80 shrink-0" />
+                            <span>{s.title}</span>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  )}
+                </div>
+              )}
 
               {/* Rotating phase message */}
               <div className="h-7 mb-6 flex items-center justify-center">
