@@ -32,7 +32,17 @@ interface LuluResult {
   priceUsd: number;
 }
 
-const LULU_BASE_URL = "https://api.lulu.com";
+// Sandbox vs prod selection. Set LULU_SANDBOX=true in .env to route every
+// request to api.sandbox.lulu.com instead of the production API. Sandbox
+// orders are free, never printed/shipped, and only visible in the sandbox
+// account at https://developers.sandbox.lulu.com — use this for end-to-end
+// tests against real Lulu APIs. Default is production; you must opt into
+// sandbox explicitly so a missing env var can never silently swallow a
+// real customer order.
+const LULU_SANDBOX = process.env.LULU_SANDBOX === "true";
+const LULU_BASE_URL = LULU_SANDBOX
+  ? "https://api.sandbox.lulu.com"
+  : "https://api.lulu.com";
 const LULU_CLIENT_KEY = process.env.LULU_CLIENT_KEY;
 const LULU_CLIENT_SECRET = process.env.LULU_CLIENT_SECRET;
 

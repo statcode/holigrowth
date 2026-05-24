@@ -94,10 +94,63 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteOrder = useDeleteZodiacOrder();
+
+  // Lulu submission state — used for the admin "Submit to Lulu (test)" flow.
+  // Pre-fills with a recognisable test address so a mis-clicked submission in
+  // sandbox is obvious in the Lulu dashboard. The form is hidden behind a
+  // collapse to keep the drawer clean for the common admin tasks.
+  const [showLuluForm, setShowLuluForm] = useState(false);
+  const [isSubmittingLulu, setIsSubmittingLulu] = useState(false);
+  const [luluResult, setLuluResult] = useState<{ luluOrderId?: string | null; luluStatus?: string | null; priceUsd?: number | null } | null>(null);
+  const [luluError, setLuluError] = useState<string | null>(null);
+  const [lulu, setLulu] = useState({
+    shippingName: order.fullName || "Test Recipient",
+    shippingAddress1: "123 Test Street",
+    shippingAddress2: "",
+    shippingCity: "San Francisco",
+    shippingState: "CA",
+    shippingZip: "94103",
+    shippingCountry: "US",
+    email: order.email ?? "test@holigrowth.com",
+  });
+
   const signLine = [order.sunSign, order.moonSign && `${order.moonSign} Moon`, order.risingSign && `${order.risingSign} Rising`].filter(Boolean).join(" · ");
 
-  // Reset the arm state whenever a different order opens.
-  useEffect(() => { setDeleteArmed(false); setDeleteError(null); }, [order.id]);
+  // Reset all per-order state when a different order opens so stale messages
+  // from a previous order don't bleed into the new drawer.
+  useEffect(() => {
+    setDeleteArmed(false);
+    setDeleteError(null);
+    setShowLuluForm(false);
+    setLuluResult(null);
+    setLuluError(null);
+    setLulu((prev) => ({
+      ...prev,
+      shippingName: order.fullName || "Test Recipient",
+      email: order.email ?? "test@holigrowth.com",
+    }));
+  }, [order.id, order.fullName, order.email]);
+
+  const handleSubmitToLulu = async () => {
+    setIsSubmittingLulu(true);
+    setLuluError(null);
+    setLuluResult(null);
+    try {
+      const res = await fetch(`/api/zodiac-orders/${order.id}/submit-to-lulu`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lulu),
+      });
+      const data = await res.json() as { luluOrderId?: string | null; luluStatus?: string | null; priceUsd?: number | null; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Lulu submission failed");
+      setLuluResult({ luluOrderId: data.luluOrderId, luluStatus: data.luluStatus, priceUsd: data.priceUsd });
+      onRefreshed();
+    } catch (err) {
+      setLuluError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsSubmittingLulu(false);
+    }
+  };
 
   const handleDelete = () => {
     if (!deleteArmed) {
@@ -435,6 +488,81 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
                       </div>
                     )}
                   </>
+                )}
+
+                {/* Submit to Lulu — admin-only test path (no Stripe required). */}
+                {order.status === "generated" && order.interiorPdfUrl && order.coverPdfUrl && !order.luluOrderId && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-[10px] uppercase tracking-widest text-fuchsia-700/70 mb-2">Submit to Lulu</p>
+                    {!showLuluForm ? (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 rounded-xl border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50"
+                        onClick={() => setShowLuluForm(true)}
+                      >
+                        <Truck className="w-4 h-4" /> Submit print order to Lulu…
+                      </Button>
+                    ) : (
+                      <div className="flex flex-col gap-2 rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3">
+                        <p className="text-[11px] text-fuchsia-900/80 leading-relaxed">
+                          <strong>Verify <code>LULU_SANDBOX=true</code></strong> in the server's .env before clicking. Sandbox orders are free + non-printed; prod orders are billable.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input className="h-9 text-sm rounded-lg col-span-2" placeholder="Recipient name" value={lulu.shippingName} onChange={(e) => setLulu({ ...lulu, shippingName: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg col-span-2" placeholder="Address line 1" value={lulu.shippingAddress1} onChange={(e) => setLulu({ ...lulu, shippingAddress1: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg col-span-2" placeholder="Address line 2 (optional)" value={lulu.shippingAddress2} onChange={(e) => setLulu({ ...lulu, shippingAddress2: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg" placeholder="City" value={lulu.shippingCity} onChange={(e) => setLulu({ ...lulu, shippingCity: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg" placeholder="State / Province" value={lulu.shippingState} onChange={(e) => setLulu({ ...lulu, shippingState: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg" placeholder="ZIP / Postal" value={lulu.shippingZip} onChange={(e) => setLulu({ ...lulu, shippingZip: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg" placeholder="Country (ISO-2, e.g. US)" value={lulu.shippingCountry} onChange={(e) => setLulu({ ...lulu, shippingCountry: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg col-span-2" placeholder="Confirmation email" value={lulu.email} onChange={(e) => setLulu({ ...lulu, email: e.target.value })} />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1 gap-2 rounded-xl border-border"
+                            onClick={() => setShowLuluForm(false)}
+                            disabled={isSubmittingLulu}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            className="flex-1 gap-2 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-700 text-white"
+                            onClick={handleSubmitToLulu}
+                            disabled={isSubmittingLulu}
+                          >
+                            {isSubmittingLulu ? (
+                              <><RefreshCw className="w-4 h-4 animate-spin" /> Submitting…</>
+                            ) : (
+                              <><Truck className="w-4 h-4" /> Confirm submit</>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {luluError && (
+                      <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 mt-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{luluError}</span>
+                      </div>
+                    )}
+
+                    {luluResult && (
+                      <div className="flex flex-col gap-1.5 text-xs text-teal-800 bg-teal-50 border border-teal-200 rounded-xl px-3 py-2.5 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Check className="w-4 h-4 shrink-0" />
+                          <span className="font-medium">Lulu accepted the print job.</span>
+                        </div>
+                        {luluResult.luluOrderId && (
+                          <p>Lulu Order ID: <code className="font-mono">{luluResult.luluOrderId}</code></p>
+                        )}
+                        {luluResult.luluStatus && <p>Status: {luluResult.luluStatus}</p>}
+                        {typeof luluResult.priceUsd === "number" && <p>Price quote: ${luluResult.priceUsd.toFixed(2)}</p>}
+                        <p className="text-teal-700/80 mt-1">Check the Lulu dashboard ({"sandbox or prod, depending on LULU_SANDBOX"}) to confirm the job appears.</p>
+                      </div>
+                    )}
+                  </div>
                 )}
 
               {/* Danger zone — permanently delete this order */}
