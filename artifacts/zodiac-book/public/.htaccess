@@ -26,9 +26,31 @@ RewriteEngine On
 # Cloudways VM and bind to the host loopback).
 RewriteRule ^api/(.*)$ http://127.0.0.1:8089/api/$1 [P,L]
 
-# SPA fallback: any non-file, non-directory request serves index.html so
-# wouter's client-side routes (e.g. /admin, /create, /order/:id, /privacy)
-# don't 404.
+# Never apply the SPA fallback to /assets/* — those are content-hashed
+# bundles emitted by Vite (e.g. index-CGp2-iuT.js). When a hash changes
+# between deploys and a user's stale index.html still references the OLD
+# hash, the old asset has been rm -rf'd by the new build and is gone. If
+# the SPA fallback caught the missing /assets/old-hash.css and returned
+# index.html instead, Firefox/Safari would block the file with a MIME-
+# type warning ("text/html" for a stylesheet) and the page renders blank.
+# Returning a hard 404 here lets the browser retry with a fresh
+# index.html that references the new hashes.
+RewriteCond %{REQUEST_URI} !^/assets/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.html [L]
+
+# Cache policy: hash-named asset bundles are immutable, so cache them
+# aggressively. index.html is the SPA shell that gets rewritten on every
+# deploy with new asset hashes — never cache it, or stale clients will
+# load deleted assets and break (see SPA-fallback note above).
+<IfModule mod_headers.c>
+    <FilesMatch "index\.html$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    <FilesMatch "\.(js|css|woff2?|ttf|otf|eot|png|jpg|jpeg|gif|svg|webp|avif)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

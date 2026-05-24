@@ -68,7 +68,7 @@ const WRITING_PHASES = [
 ];
 
 const STAGE_LABELS: Record<string, { title: string; sub: string }> = {
-  writing: { title: "Reading the Stars",     sub: "Your AI-powered astrologer is consulting the cosmos…" },
+  writing: { title: "Reading the Stars",     sub: "Your higher cosmos guide is developing your book now…" },
   pdf:     { title: "Typesetting Your Book", sub: "Laying out your full-color pages in perfect order…" },
   upload:  { title: "Securing Your Book",    sub: "Uploading and encrypting your personalized file…" },
 };
