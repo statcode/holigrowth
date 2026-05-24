@@ -284,7 +284,12 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
   try {
     const systemPrompt = await loadBookSystemPrompt();
     const sections = getBookSections(order);
-    const model = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
+    // Default model is Gemini 2.5 Flash — fastest + cheapest model that still
+    // writes the book at the quality bar we want. Override per-environment
+    // by setting OPENROUTER_MODEL in .env (e.g. "anthropic/claude-haiku-4-5"
+    // if you want more poetic prose, or "openai/gpt-5-mini" for stricter
+    // adherence to the per-chapter word-count targets).
+    const model = process.env.OPENROUTER_MODEL ?? "google/gemini-2.5-flash";
 
     // Tell the client how many sections to expect so the loader can show
     // a progress bar / "n of N" count.
