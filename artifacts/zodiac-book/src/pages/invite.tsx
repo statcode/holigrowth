@@ -5,6 +5,7 @@ import {
   Sparkles, Heart, Coins, Leaf, ArrowRight, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/SEO";
 import { useGetReferral, getGetReferralQueryKey } from "@workspace/api-client-react";
 import { useLocation, useParams } from "wouter";
 
@@ -136,6 +137,7 @@ export default function Invite() {
 
   return (
     <div className="min-h-screen bg-[#0e1b2a] text-white overflow-x-hidden relative">
+      <SEO title="You've Been Invited — Holigrowth" noindex />
       <StarField />
 
       {/* Ambient orbs */}

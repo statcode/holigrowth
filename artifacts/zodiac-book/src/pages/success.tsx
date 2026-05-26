@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { motion } from "framer-motion";
+import { SEO } from "@/components/SEO";
 import { Sun, Moon, Star, Hash, ArrowRight, Copy, Check, Share2, Users, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGetZodiacOrder, getGetZodiacOrderQueryKey } from "@workspace/api-client-react";
@@ -238,6 +239,7 @@ export default function Success() {
 
   return (
     <div className="min-h-screen bg-[#0e1b2a] text-white flex flex-col relative overflow-hidden">
+      <SEO title="Order Confirmed — Holigrowth" noindex />
       {showConfetti && <Confetti />}
 
       {/* Ambient glow */}

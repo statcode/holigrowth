@@ -1,11 +1,17 @@
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 const LAST_UPDATED = "May 22, 2026";
 
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Privacy Policy — Holigrowth"
+        description="How Holigrowth collects, uses, and protects your birth details, contact info, and order data. Read what we share with Stripe, Lulu Press, MailerLite, and OpenRouter — and how to request deletion."
+        path="/privacy"
+      />
       <header className="py-4 px-6 border-b border-border bg-white/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/"><img src="/images/holigrowth-logo.png" alt="Holigrowth" className="h-10 w-auto" /></Link>

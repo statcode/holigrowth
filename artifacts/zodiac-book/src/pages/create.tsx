@@ -6,6 +6,7 @@ import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ArrowLeft, Loader2, Sparkles, Gift, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/SEO";
 import {
   Form,
   FormControl,
@@ -206,6 +207,11 @@ export default function Create() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <SEO
+        title="Create Your Holistic Growth Life Path Book — Holigrowth"
+        description="Share your birth details and we'll write your personalised astrology and numerology book. Takes 2 minutes. Preview your opening chapters free — only order if you love it."
+        path="/create"
+      />
       <header className="py-4 px-6 border-b border-border bg-white/80 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-center">
           <a href="/">

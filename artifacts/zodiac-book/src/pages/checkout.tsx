@@ -7,6 +7,7 @@ import { Loader2, CheckCircle } from "lucide-react";
 import { useGetZodiacOrder, getGetZodiacOrderQueryKey, useSubmitToLulu, useGetSiteSettings, getGetSiteSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/SEO";
 import {
   Form,
   FormControl,
@@ -130,6 +131,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO title="Checkout — Holigrowth" noindex />
       <Nav />
       <div className="max-w-5xl mx-auto py-16 px-6 grid md:grid-cols-2 gap-16">
         {/* Form Column */}

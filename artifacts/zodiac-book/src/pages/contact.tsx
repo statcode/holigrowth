@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { ArrowLeft, Mail, Package, Sparkles, ShieldCheck, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/SEO";
 
 // Update this if your support inbox changes. Pages that link to /contact
 // will continue to work — only the mailto target needs to move.
@@ -9,6 +10,11 @@ const SUPPORT_EMAIL = "support@holigrowth.com";
 export default function Contact() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Contact Us — Holigrowth"
+        description="Get in touch with Holigrowth about your personalised astrology book, order status, shipping, or anything else. We reply within 3 business days."
+        path="/contact"
+      />
       <header className="py-4 px-6 border-b border-border bg-white/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/"><img src="/images/holigrowth-logo.png" alt="Holigrowth" className="h-10 w-auto" /></Link>

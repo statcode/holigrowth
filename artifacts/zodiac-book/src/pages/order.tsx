@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAdmin } from "@/contexts/admin-context";
 import { useLocation, useParams, useSearch } from "wouter";
+import { SEO } from "@/components/SEO";
 import { motion } from "framer-motion";
 import { Loader2, Sparkles, Star, Sun, Moon, ArrowRight, Hash, Heart, Coins, Leaf, Lock, Clock } from "lucide-react";
 import { CosmicLoader } from "@/components/CosmicLoader";
@@ -353,6 +354,7 @@ export default function Order() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO title="Your Order — Holigrowth" noindex />
       <Nav />
       <div className="fixed inset-0 pointer-events-none -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-secondary/6 rounded-full blur-[150px]" />

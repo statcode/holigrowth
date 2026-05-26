@@ -1,9 +1,11 @@
 import { Link, useSearch } from "wouter";
 import { motion, type Variants } from "framer-motion";
-import { Star, Sparkles, Moon, Heart, Coins, Leaf, Hash, Quote, CheckCircle, Gift, X, Truck, BookOpen, Flame, Package, Eye, ShieldCheck, Zap } from "lucide-react";
+import { Star, Sparkles, Heart, Coins, Leaf, CheckCircle, Gift, X, Truck, BookOpen, Flame, Package, Eye, ShieldCheck, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SEO } from "@/components/SEO";
 import { useGetReferral, getGetReferralQueryKey } from "@workspace/api-client-react";
 import { useState } from "react";
+import heroWatercolor from "@assets/hero-watercolor.png";
 
 const fadeIn: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -73,6 +75,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Holistic Growth Life Path — Personalised Astrology & Birth Chart Book"
+        description="A full-color hardbound book written entirely from your birth chart. 13 personal chapters across relationships, wealth, health, lucky numbers, and your birthstone — printed in the USA. Preview your opening pages free."
+        path="/"
+      />
       {/* Referral Banner */}
       {refCode && <ReferralBanner code={refCode} />}
 
@@ -95,8 +102,14 @@ export default function Home() {
       </header>
 
       {/* ── PRODUCT HERO ── */}
-      <section className="py-12 px-6 lg:py-20">
-        <div className="max-w-6xl mx-auto">
+      <section className="relative py-12 px-6 lg:py-20 overflow-hidden">
+        <img
+          src={heroWatercolor}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-x-0 top-0 w-full max-h-[500px] object-cover object-top opacity-60 mix-blend-multiply [mask-image:linear-gradient(to_bottom,black_15%,transparent_85%)]"
+        />
+        <div className="relative max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 
             {/* Left — book image */}

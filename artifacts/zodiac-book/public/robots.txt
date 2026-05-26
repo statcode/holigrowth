@@ -1,0 +1,20 @@
+# Holigrowth — robots.txt
+# Public pages (homepage, create funnel, legal, contact) are open to all crawlers.
+# Transactional / per-user pages are blocked so Google's index doesn't pollute
+# with strangers' order IDs, and so AI assistants don't accidentally surface them.
+
+User-agent: *
+Allow: /$
+Allow: /create
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Disallow: /admin
+Disallow: /preview/
+Disallow: /order/
+Disallow: /success/
+Disallow: /track
+Disallow: /invite/
+Disallow: /api/
+
+Sitemap: https://holigrowth.com/sitemap.xml

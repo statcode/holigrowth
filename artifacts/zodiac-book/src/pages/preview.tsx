@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useLocation, useParams, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { SEO } from "@/components/SEO";
 import { ChevronLeft, ChevronRight, ArrowRight, Loader2, Lock, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/contexts/admin-context";
@@ -1275,6 +1276,7 @@ export default function Preview() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <SEO title="Your Book Preview — Holigrowth" noindex />
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[400px] bg-secondary/5 rounded-full blur-[120px]" />
       </div>

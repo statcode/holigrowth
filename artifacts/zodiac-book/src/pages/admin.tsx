@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, type FormEvent } from "react";
 import { useAdmin } from "@/contexts/admin-context";
+import { SEO } from "@/components/SEO";
 import { useListZodiacOrders, useGetOrderStats, useGetSiteSettings, useUpdateSiteSettings, useDeleteZodiacOrder, getListZodiacOrdersQueryKey, getGetOrderStatsQueryKey, getGetSiteSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1099,6 +1100,10 @@ export default function Admin() {
   const [loginError, setLoginError] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
 
+  // Admin pages must never be indexed by Google / Bing / AI crawlers — they're
+  // staff-only and exposing them in search results helps no one.
+  const adminSeo = <SEO title="Admin — Holigrowth" path="/admin" noindex />;
+
   const { data: orders = [], isLoading, refetch, isFetching } = useListZodiacOrders({
     query: { refetchInterval: 30_000, queryKey: getListZodiacOrdersQueryKey() },
   });
@@ -1170,6 +1175,7 @@ export default function Admin() {
 
     return (
       <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
+        {adminSeo}
         <div className="bg-white rounded-2xl border border-border p-10 w-full max-w-sm shadow-sm">
           <div className="text-center mb-8">
             <img src="/images/holigrowth-logo.png" alt="Holigrowth" className="h-10 w-auto mx-auto mb-5" />
@@ -1203,6 +1209,7 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-foreground">
+      {adminSeo}
       {/* Header */}
       <header className="bg-white border-b border-border px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

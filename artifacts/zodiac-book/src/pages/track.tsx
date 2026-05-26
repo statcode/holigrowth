@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SEO } from "@/components/SEO";
 import {
   Search, Sun, Moon, Star, Hash, MapPin, Package, Printer,
   Truck, CheckCircle2, Clock, AlertCircle, RefreshCw, ExternalLink,
@@ -385,6 +386,7 @@ export default function Track() {
 
   return (
     <div className="min-h-screen bg-[#0e1b2a] text-white flex flex-col">
+      <SEO title="Track Your Order — Holigrowth" path="/track" noindex />
       <div className="pointer-events-none fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#c9a84c]/6 rounded-full blur-[100px]" />
 
       <header className="py-4 px-6 border-b border-white/8 relative z-10">

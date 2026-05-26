@@ -1,11 +1,17 @@
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 const LAST_UPDATED = "May 22, 2026";
 
 export default function Terms() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEO
+        title="Terms of Service — Holigrowth"
+        description="Holigrowth Terms of Service: order policy, refund and reprint policy, intellectual property, and the disclaimer that the book is for entertainment and self-reflection only."
+        path="/terms"
+      />
       <header className="py-4 px-6 border-b border-border bg-white/90 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/"><img src="/images/holigrowth-logo.png" alt="Holigrowth" className="h-10 w-auto" /></Link>
