@@ -12,7 +12,7 @@
  * uses `#`). We detect chapter-ness by the heading TEXT, not by hash count.
  */
 
-import { promises as fs } from "node:fs";
+import { promises as fs, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -95,15 +95,42 @@ export interface Manifest {
 
 // ── Manifest loading ─────────────────────────────────────────────────────────
 
-const TEMPLATES_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "book-templates",
-);
+/**
+ * Locate `artifacts/book-templates/` at runtime. Two scenarios:
+ *
+ *   1. **Bundled** (production, `pm2`'s `dist/index.mjs`): `import.meta.url`
+ *      lives at `artifacts/api-server/dist/index.mjs` → 2 dirs up to
+ *      `artifacts/`, then `+book-templates`.
+ *   2. **Source** (local smoke scripts via `tsx`): `import.meta.url` lives at
+ *      `artifacts/api-server/src/routes/zodiac-orders/templatedPdf/parse.ts`
+ *      → 5 dirs up to `artifacts/`, then `+book-templates`.
+ *
+ * The previous implementation hard-coded the 5-up offset, which silently
+ * broke in production by landing at `/home/<server>/book-templates/`
+ * (well outside the app's home dir). Fix is to probe both candidates and
+ * use whichever has `manifest.json` present. Env override
+ * (`BOOK_TEMPLATES_DIR=…`) wins if set, for ops-level recovery.
+ */
+function resolveTemplatesDir(): string {
+  if (process.env.BOOK_TEMPLATES_DIR) return process.env.BOOK_TEMPLATES_DIR;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(here, "..", "..", "book-templates"),                       // bundled  dist/index.mjs → artifacts/
+    path.resolve(here, "..", "..", "..", "..", "..", "book-templates"),     // source   parse.ts → artifacts/
+  ];
+  for (const c of candidates) {
+    if (existsSync(path.join(c, "manifest.json"))) return c;
+  }
+  // Fall back to the first candidate so the eventual file-open error
+  // surfaces with the canonical path (helps future debugging) — but log
+  // loudly so an ops person knows the templates dir is missing.
+  console.error(
+    `[templates] artifacts/book-templates not found in either candidate location: ${candidates.join(", ")}`,
+  );
+  return candidates[0]!;
+}
+
+const TEMPLATES_DIR = resolveTemplatesDir();
 
 let cachedManifest: Manifest | null = null;
 
