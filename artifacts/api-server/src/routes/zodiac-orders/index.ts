@@ -296,33 +296,60 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
     res.write(`data: ${JSON.stringify({ stage: "writing", totalSections: sections.length })}\n\n`);
 
     /** Run a single section's AI call to completion and emit a progress
-     *  event when it finishes. Returns the original index so we can stitch
-     *  the chapters in book order regardless of completion order. */
+     *  event when it finishes. One automatic retry on failure (timeout,
+     *  idle stall, or transient 5xx) — OpenRouter occasionally drops a
+     *  single connection mid-stream, and retrying is cheaper than asking
+     *  the customer to start over. Returns the original index so we can
+     *  stitch the chapters in book order regardless of completion order. */
     const runSection = async (section: typeof sections[number], idx: number, completedRef: { n: number }): Promise<{ idx: number; key: string; text: string }> => {
-      const stream = streamChatCompletion({
-        model,
-        maxTokens: 4096,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: section.userPrompt },
-        ],
-      });
-      let text = "";
-      for await (const chunk of stream) text += chunk;
-      completedRef.n += 1;
-      // Emit progress as each chapter resolves. Multiple sections finish
-      // concurrently — `n` here is the COUNT of completed sections, not
-      // the index, so the UI's count never goes backwards.
-      res.write(`data: ${JSON.stringify({
-        stage: "writing",
-        sectionComplete: {
-          n: completedRef.n,
-          total: sections.length,
-          key: section.key,
-          title: section.title,
-        },
-      })}\n\n`);
-      return { idx, key: section.key, text: text.trim() };
+      const MAX_ATTEMPTS = 2;
+      let lastErr: unknown = null;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          const stream = streamChatCompletion({
+            model,
+            maxTokens: 4096,
+            // Per-section caps: 3 min hard total, 45 s idle-stall. These keep
+            // a single slow / hung chapter from holding the whole book hostage.
+            requestTimeoutMs: 180_000,
+            idleTimeoutMs: 45_000,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: section.userPrompt },
+            ],
+          });
+          let text = "";
+          for await (const chunk of stream) text += chunk;
+          if (text.trim().length === 0) {
+            throw new Error(`OpenRouter returned empty response for section "${section.key}"`);
+          }
+          completedRef.n += 1;
+          // Emit progress as each chapter resolves. Multiple sections finish
+          // concurrently — `n` here is the COUNT of completed sections, not
+          // the index, so the UI's count never goes backwards.
+          res.write(`data: ${JSON.stringify({
+            stage: "writing",
+            sectionComplete: {
+              n: completedRef.n,
+              total: sections.length,
+              key: section.key,
+              title: section.title,
+            },
+          })}\n\n`);
+          return { idx, key: section.key, text: text.trim() };
+        } catch (err) {
+          lastErr = err;
+          logger.warn(
+            { err, sectionKey: section.key, attempt, orderId: params.data.id },
+            `Section "${section.key}" attempt ${attempt}/${MAX_ATTEMPTS} failed`,
+          );
+          if (attempt < MAX_ATTEMPTS) continue;
+        }
+      }
+      // Both attempts failed — throw with section context so the outer
+      // catch can tell the client which chapter died.
+      const message = lastErr instanceof Error ? lastErr.message : String(lastErr);
+      throw new Error(`Section "${section.key}" failed after ${MAX_ATTEMPTS} attempts: ${message}`);
     };
 
     const completedRef = { n: 0 };
