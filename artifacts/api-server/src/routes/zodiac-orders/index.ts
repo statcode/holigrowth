@@ -437,7 +437,12 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
     res.write(`data: ${JSON.stringify({ done: true, metadata, interiorPdfUrl, coverPdfUrl, pageCount })}\n\n`);
     res.end();
   } catch (error) {
-    logger.error({ error }, "Failed to generate zodiac content");
+    // Surface the underlying error message in the response so DevTools shows
+    // the actual cause (e.g. "Section 'chapter-5' failed after 2 attempts:
+    // OpenRouter 429: rate limited"). The error is also logged with full
+    // context for prod debugging via pm2.
+    const errMessage = error instanceof Error ? error.message : String(error);
+    logger.error({ error, errMessage, orderId: params.data.id }, "Failed to generate zodiac content");
 
     await db
       .update(zodiacOrdersTable)
@@ -456,7 +461,10 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
       );
     }
 
-    res.write(`data: ${JSON.stringify({ error: "Generation failed. Please try again." })}\n\n`);
+    res.write(`data: ${JSON.stringify({
+      error: "Generation failed. Please try again.",
+      detail: errMessage,
+    })}\n\n`);
     res.end();
   } finally {
     if (keepAliveTimer) {
