@@ -5,18 +5,16 @@
 #
 #   ./deploy.sh
 #
-# Sets PM2_HOME inline before invoking pm2, because Cloudways gives this app
-# a read-only home dir (~/.bashrc itself is unwritable), so we can't persist
-# the export the usual way. The default ~/.pm2/ location is unreachable;
-# we keep pm2's state inside ~/public_html/.pm2-holigrowth/ instead.
-#
 # `set -e` aborts immediately on any failed step — better than barreling on
 # and leaving a half-built dist/ paired with the old api-server bundle.
+#
+# Historical note: this script used to export PM2_HOME=$HOME/public_html/
+# .pm2-holigrowth/ because Cloudways had created ~/ with no write access for
+# the SSH user, so pm2 couldn't make its default ~/.pm2/. Cloudways support
+# fixed that for the syffkdguxx app on 2026-05-27 by creating ~/.pm2/ owned
+# by user, mode 775 — matching how the colorgifts app was already set up.
+# The workaround is now removed; deploys use the standard pm2 location.
 set -e
-
-# Cloudways-specific: this app's home dir is read-only, so PM2 can't write
-# to ~/.pm2/. Relocate its state to the writable public_html/.
-export PM2_HOME="$HOME/public_html/.pm2-holigrowth"
 
 # Always run from the script's own directory — lets the user invoke this
 # from anywhere ("bash ~/public_html/deploy.sh") and still hit the right

@@ -1,39 +1,27 @@
 /**
  * pm2 process config for the api-server on Cloudways (and any plain Linux host).
  *
- * ─── ⚠ Cloudways one-time setup: relocate PM2_HOME ─────────────────────────
+ * ─── ⚠ Cloudways one-time setup: ~/.pm2/ writable by SSH user ──────────────
  *
- * Cloudways' app shells have a READ-ONLY home directory (owned by root, your
- * SSH user only has read+exec). The system-installed pm2 at `/usr/bin/pm2`
- * defaults its state directory to `~/.pm2/` — which it can't create. Every
- * pm2 command then crashes with:
+ * Cloudways' app shells often ship with a READ-ONLY home directory (owned by
+ * root, mode 0755), so the system-installed pm2 at `/usr/bin/pm2` can't
+ * create its default `~/.pm2/` state directory and every command fails with:
  *
  *     EACCES: permission denied, mkdir '/home/.../.pm2/logs'
  *
- * Some Cloudways apps have `~/.pm2/` pre-created by support / provisioning;
- * fresh apps don't. Sidestep the whole issue by parking pm2's state inside
- * `~/public_html/` (which IS writable by your SSH user):
+ * The clean fix is a one-line Cloudways support ticket:
  *
- *     mkdir -p $HOME/public_html/.pm2-holigrowth
- *     export PM2_HOME=$HOME/public_html/.pm2-holigrowth
- *     # Persist for every future SSH session + cron job:
- *     echo 'export PM2_HOME=$HOME/public_html/.pm2-holigrowth' >> ~/.bashrc
+ *     Please create ~/.pm2/ for the <app> app, owned by user <ssh-user>,
+ *     mode 775. The colorgifts app on the same VM already has this set up
+ *     — could you mirror that?
  *
- * Verify with `pm2 list` (should print an empty process table). The dotfile
- * dir is not web-reachable — Cloudways' Apache only serves what's mapped to
- * the document root, not arbitrary dotfile siblings.
- *
- * Skip this whole section on any host where `touch ~/.write-test` succeeds.
+ * Free, ~24h turnaround. Once it's in place, everything below works the
+ * same as any other Linux host — no PM2_HOME env var, no workaround script.
  *
  * ─── First deploy on a new server ──────────────────────────────────────────
  *
  *   # one-time: pnpm version match (Cloudways' system pnpm may be old)
  *   npm install -g pnpm@10.33.0
- *
- *   # one-time: PM2_HOME relocation (see warning block above)
- *   mkdir -p $HOME/public_html/.pm2-holigrowth
- *   echo 'export PM2_HOME=$HOME/public_html/.pm2-holigrowth' >> ~/.bashrc
- *   source ~/.bashrc
  *
  *   # deploy
  *   git clone <repo> ~/public_html && cd ~/public_html
