@@ -1095,39 +1095,44 @@ async function buildBodyContinuedPage(
 /** Pick 3 distinct short sentences/phrases from chapter content for the
  *  BULLET_1/2/3 slots. Falls back gracefully (masks unfilled slots) rather
  *  than repeating the same line three times. */
+/** Bullets are scannable topic markers — short, distinct, ALL-CAPS-renderable.
+ *  We ONLY use subsection headings, because the previous "fall back to lead
+ *  sentences" path produced uppercase blocks like
+ *  "WELCOME, DSDSSDCSCS CDSS, TO A JOURNEY INTO THE HEART OF YOUR U…"
+ *  which looked broken. If the chapter has fewer than 3 real headings, the
+ *  unused bullet slots are masked entirely by the caller (no ◆ glyph leak).
+ *
+ *  Also: the affirmation section heading ("Your 10 Relationship Affirmations"
+ *  and variants) is excluded — that subsection has its own dedicated
+ *  affirmation page, so surfacing it as a body-page bullet duplicates
+ *  navigation noise. */
+const AFFIRMATION_HEADING_RE = /your\s+\d+\s+\w+\s+affirmations?|^affirmations?/i;
 function pickThreeBullets(ch: ParsedChapter): (string | null)[] {
   const pool: string[] = [];
-  // 1. Use subsection headings first — they're already-distinct topic markers.
   for (const h of ch.subsections.map((s) => s.heading)) {
     if (pool.length >= 3) break;
-    if (h && !pool.includes(h)) pool.push(h);
-  }
-  // 2. Top up from the lead's sentences (filter for scannable length).
-  if (pool.length < 3) {
-    const sentences = ch.lead
-      .replace(/\s+/g, " ")
-      .split(/(?<=[.!?])\s+(?=[A-Z])/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 25 && s.length < 95);
-    for (const s of sentences) {
-      if (pool.length >= 3) break;
-      if (!pool.includes(s)) pool.push(s);
-    }
-  }
-  // 3. Top up from each subsection's first sentence.
-  if (pool.length < 3) {
-    for (const sec of ch.subsections) {
-      if (pool.length >= 3) break;
-      const first = sec.paragraphs[0]?.split(/(?<=[.!?])\s+/)[0]?.trim() ?? "";
-      if (first.length > 25 && first.length < 95 && !pool.includes(first)) pool.push(first);
-    }
+    if (!h) continue;
+    if (AFFIRMATION_HEADING_RE.test(h)) continue;
+    if (pool.includes(h)) continue;
+    // Skip headings that are clearly prose, not topic markers — anything over
+    // ~60 chars probably won't render cleanly in tracked uppercase.
+    if (h.length > 60) continue;
+    pool.push(h);
   }
   return [pool[0] ?? null, pool[1] ?? null, pool[2] ?? null];
 }
 
 async function buildStandardBodyFlow(ctx: BuildCtx, ch: ParsedChapter, options?: { firstPageOnly?: boolean }): Promise<void> {
-  const paragraphPool = ch.subsections.flatMap((s) => s.paragraphs);
-  const headings = ch.subsections.map((s) => s.heading);
+  // Exclude the affirmation subsection from the body-page flow. Pillar
+  // chapters (5/6/7) deliver "Your 10 X Affirmations" as a normal subsection
+  // in the markdown, but that content is destined for the dedicated
+  // affirmation page later in the recipe — rendering it as standard-body
+  // prose duplicates it AND looks broken when 10 inline numbered items get
+  // chunked across body slots. Drop it here; the affirmation page reads
+  // from `ch.affirmations`, not the subsection.
+  const visibleSubsections = ch.subsections.filter((s) => !AFFIRMATION_HEADING_RE.test(s.heading));
+  const paragraphPool = visibleSubsections.flatMap((s) => s.paragraphs);
+  const headings = visibleSubsections.map((s) => s.heading);
 
   const stdBody = ctx.manifest.pageTypes["standard-body"];
   const firstBodySlots = getSlots(stdBody, "BODY_PARAGRAPH").length;
@@ -1150,8 +1155,17 @@ async function buildStandardBodyFlow(ctx: BuildCtx, ch: ParsedChapter, options?:
       fillFlowingBody(rc, "LEAD_PARAGRAPH", leadSlot, ch.lead, ctx.manifest.spec.page.heightPt, cap);
     }
     for (let i = 0; i < subSlots.length; i++) {
-      if (headings[i]) fillSlot(rc, "SUBSECTION_HEADING", subSlots[i]!, headings[i]!);
-      else maskSlot(rc, subSlots[i]!);
+      if (headings[i]) {
+        fillSlot(rc, "SUBSECTION_HEADING", subSlots[i]!, headings[i]!);
+      } else {
+        // Standard-body template bakes a ◆ glyph to the left of each
+        // subsection widget. The default ±1pt maskSlot pad leaves that
+        // diamond visible on an orphaned subsection, so we paint a wider
+        // mask that reaches 20pt left of slot.x and a few pt above/below
+        // the baseline. Same pattern used on body-continued for its ★.
+        const s = subSlots[i]!;
+        drawMaskRect(rc, s.x - 22, s.y - 8, s.w + 26, s.h + 14);
+      }
     }
 
     // 3 distinct bullets — never repeat the same line three times. When a
@@ -1385,13 +1399,32 @@ function drawAffirmationList(rc: RenderCtx, slot: Slot, items: string[]): void {
   const font = pickFont(style.weight, rc.fonts);
   const color = rgbColor(resolveColor(style, rc.pageType));
   const pageWidth = rc.page.getSize().width;
-  // Vertical band: between the decorative 〝〝 ornament (~y=525) and ~15pt
-  // above the READER_FIRST_NAME baseline (~y=435 from the widget rect).
-  // Centre the list around the AFFIRMATION_TEXT anchor (~y=482).
+  // Vertical band: between the decorative 〝〝 ornament (~y=525) and ~20pt
+  // above the READER_FIRST_NAME glyph tops (which start at ~y=445 — the
+  // widget rect goes y=431-445). The previous floor of 450 left only a 5pt
+  // gap between the last affirmation's descender and the SAMPLE row's
+  // tallest glyphs, which read as overlap in the rendered PDF. Floor of
+  // 458 keeps a comfortable 13pt visual clearance even when a 5-item stack
+  // shrinks to ~10pt. Centre the list around y=493 (slightly above the
+  // AFFIRMATION_TEXT anchor) so the visual centre lines up with the
+  // ornament band.
   const BAND_TOP = 528;
-  const BAND_BOTTOM = 450;
+  const BAND_BOTTOM = 458;
   const centerY = (BAND_TOP + BAND_BOTTOM) / 2;
   const bandHeight = BAND_TOP - BAND_BOTTOM;
+
+  // Items are sanitised before this function (parse.ts → cleanListItem),
+  // but defend in depth: a verbose mantra that slipped through truncation
+  // would push the stack past the band. Hard-cap each item to 110 chars so
+  // the stack always fits.
+  const safeItems = items.map((t) => {
+    const trimmed = t.trim();
+    if (trimmed.length <= 110) return trimmed;
+    const truncated = trimmed.slice(0, 107);
+    // Don't break mid-word — back up to the last space.
+    const lastSpace = truncated.lastIndexOf(" ");
+    return (lastSpace > 80 ? truncated.slice(0, lastSpace) : truncated) + "…";
+  });
 
   // Leading is tight (1.25×) and the inter-item gap is small (0.2× leading)
   // so a 5-item stack lands at a readable ~11pt rather than the 8-9pt range
@@ -1402,18 +1435,18 @@ function drawAffirmationList(rc: RenderCtx, slot: Slot, items: string[]): void {
   // stack into the SAMPLE row below).
   const ITEM_LEADING_MULT = 1.25;
   const INTER_ITEM_GAP_MULT = 0.2;
-  const minSize = items.length === 1 ? style.size : 9.5;
+  const minSize = safeItems.length === 1 ? style.size : 9.5;
   const maxSize = style.size;
-  const wrapWidth = items.length > 1 ? 380 : (style.wrapWidth ?? 320);
+  const wrapWidth = safeItems.length > 1 ? 380 : (style.wrapWidth ?? 320);
   let size = maxSize;
   let lineGap = 0;
   let wrapped: string[][] = [];
   while (size >= minSize) {
     const leading = size * ITEM_LEADING_MULT;
     lineGap = leading;
-    wrapped = items.map((t) => wrapText(t, font, size, wrapWidth));
+    wrapped = safeItems.map((t) => wrapText(t, font, size, wrapWidth));
     const totalLines = wrapped.reduce((sum, ls) => sum + ls.length, 0);
-    const interGap = items.length > 1 ? (items.length - 1) * leading * INTER_ITEM_GAP_MULT : 0;
+    const interGap = safeItems.length > 1 ? (safeItems.length - 1) * leading * INTER_ITEM_GAP_MULT : 0;
     const totalHeight = totalLines * leading + interGap;
     if (totalHeight <= bandHeight) break;
     size -= 0.5;
@@ -1422,9 +1455,9 @@ function drawAffirmationList(rc: RenderCtx, slot: Slot, items: string[]): void {
   // Render stacked, vertically centred.
   const ascender = size * 0.78;
   const leading = lineGap;
-  const interGap = items.length > 1 ? leading * INTER_ITEM_GAP_MULT : 0;
+  const interGap = safeItems.length > 1 ? leading * INTER_ITEM_GAP_MULT : 0;
   const totalLines = wrapped.reduce((sum, ls) => sum + ls.length, 0);
-  const totalHeight = totalLines * leading + (items.length > 1 ? (items.length - 1) * interGap : 0);
+  const totalHeight = totalLines * leading + (safeItems.length > 1 ? (safeItems.length - 1) * interGap : 0);
   let cursorY = centerY + totalHeight / 2 - ascender;
   for (let i = 0; i < wrapped.length; i++) {
     const lines = wrapped[i]!;
@@ -1715,7 +1748,22 @@ function signElement(sign: string | null | undefined): string {
 function splitParagraphs(body: string, count: number): string[] {
   const paras = body
     .split(/\n\n+/)
+    // Drop blockquote-only paragraphs (`> …`) — those are pull quotes that
+    // belong on their own page or in a dedicated band, not in the letter
+    // body. Without this, the closing letter showed "> The cosmos was
+    // writing toward you…" literally inside paragraph 3.
+    .filter((p) => !/^\s*>\s/.test(p))
     .map((p) => p.replace(/\s+/g, " ").trim())
+    // Strip lightweight markdown emphasis (`*foo*`, `**foo**`, `_foo_`) so
+    // we don't render the asterisks literally. The body slots are already
+    // styled per-template; preserving emphasis markers in print would just
+    // confuse the reader.
+    .map((p) =>
+      p
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/(^|\s)_([^_]+)_(?=\s|$|[.,!?;:])/g, "$1$2"),
+    )
     .filter(Boolean);
   if (paras.length === 0) return Array(count).fill("");
   if (paras.length >= count) {
@@ -1751,8 +1799,27 @@ async function buildWelcomeLetter(ctx: BuildCtx, body: string): Promise<void> {
   };
 
   fill("READER_FIRST_NAME", firstName(ctx.order));
-  fill("WELCOME_BODY_PARAGRAPH_1", p1 ?? "");
-  fill("WELCOME_BODY_PARAGRAPH_2", p2 ?? "");
+
+  // Body paragraphs use fillFlowingBody with a hard bottom cap so a long
+  // welcome message doesn't flow past its slot's vertical boundary into
+  // the next paragraph's region — and ultimately into the disclaimer /
+  // signature slots below. Without the cap, paragraph 1 (slot at y=344,
+  // h=80) routinely overflows into paragraph 2 (y=259) and the signature
+  // line (y=110), which manifested as the visible "double text layer"
+  // overlap on page 2. fillFlowingBody truncates with an ellipsis when it
+  // would otherwise breach the cap.
+  const pageH = ctx.manifest.spec.page.heightPt;
+  const bodyP1Slot = getSlot(pageType, "WELCOME_BODY_PARAGRAPH_1");
+  const bodyP2Slot = getSlot(pageType, "WELCOME_BODY_PARAGRAPH_2");
+  if (bodyP1Slot && p1) {
+    const cap = nextSlotTopBelow(bodyP1Slot, pageType, ctx);
+    fillFlowingBody(rc, "WELCOME_BODY_PARAGRAPH_1", bodyP1Slot, p1, pageH, cap);
+  } else if (bodyP1Slot) maskSlot(rc, bodyP1Slot);
+  if (bodyP2Slot && p2) {
+    const cap = nextSlotTopBelow(bodyP2Slot, pageType, ctx);
+    fillFlowingBody(rc, "WELCOME_BODY_PARAGRAPH_2", bodyP2Slot, p2, pageH, cap);
+  } else if (bodyP2Slot) maskSlot(rc, bodyP2Slot);
+
   fill("WELCOME_SIGNOFF_LINE", WELCOME_DEFAULT_SIGNOFF);
   fill("WELCOME_SIGNATURE", WELCOME_DEFAULT_SIGNATURE);
   fill("WELCOME_FOOTER", WELCOME_DEFAULT_FOOTER);
@@ -1780,9 +1847,28 @@ async function buildClosingLetter(ctx: BuildCtx, body: string): Promise<void> {
   fill("RISING_SIGN", order.risingSign ?? "");
   fill("LIFE_PATH", order.lifePath ?? "");
   fill("PERSONAL_YEAR", String(personalYr)); // no-op until designer adds the {{PERSONAL_YEAR}} token's closing braces
-  fill("CLOSING_BODY_PARAGRAPH_1", p1 ?? "");
-  fill("CLOSING_BODY_PARAGRAPH_2", p2 ?? "");
-  fill("CLOSING_BODY_PARAGRAPH_3", p3 ?? "");
+
+  // Body paragraphs use fillFlowingBody with a hard bottom cap so a long
+  // closing paragraph doesn't overflow into the next paragraph slot — the
+  // visible "Your Life Path Number 7" double-layer overlap on page 52 was
+  // paragraph 1 spilling past its bottom into paragraph 2's territory.
+  const pageH = ctx.manifest.spec.page.heightPt;
+  const slotP1 = getSlot(pageType, "CLOSING_BODY_PARAGRAPH_1");
+  const slotP2 = getSlot(pageType, "CLOSING_BODY_PARAGRAPH_2");
+  const slotP3 = getSlot(pageType, "CLOSING_BODY_PARAGRAPH_3");
+  if (slotP1 && p1) {
+    const cap = nextSlotTopBelow(slotP1, pageType, ctx);
+    fillFlowingBody(rc, "CLOSING_BODY_PARAGRAPH_1", slotP1, p1, pageH, cap);
+  } else if (slotP1) maskSlot(rc, slotP1);
+  if (slotP2 && p2) {
+    const cap = nextSlotTopBelow(slotP2, pageType, ctx);
+    fillFlowingBody(rc, "CLOSING_BODY_PARAGRAPH_2", slotP2, p2, pageH, cap);
+  } else if (slotP2) maskSlot(rc, slotP2);
+  if (slotP3 && p3) {
+    const cap = nextSlotTopBelow(slotP3, pageType, ctx);
+    fillFlowingBody(rc, "CLOSING_BODY_PARAGRAPH_3", slotP3, p3, pageH, cap);
+  } else if (slotP3) maskSlot(rc, slotP3);
+
   fill("CLOSING_FOOTER", CLOSING_DEFAULT_FOOTER);
 }
 

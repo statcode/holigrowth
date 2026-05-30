@@ -242,7 +242,12 @@ function parseChapterBody(body: string): { lead: string; subsections: ParsedSubs
  *  paragraphs. Tolerates both newline-separated and space-separated items —
  *  `parseChapterBody` normalises whitespace inside paragraphs to single
  *  spaces, so by the time we see the list it may already be one long
- *  "1. ... 2. ... 3. ..." string. */
+ *  "1. ... 2. ... 3. ..." string.
+ *
+ *  Each item is also sanitised: stray markdown bolding (`**word**` or `* *commentary* *`),
+ *  bracketed commentary, and trailing explanation past the first sentence are
+ *  stripped. Gemini in particular likes to emit "1. I am light. * *Use this
+ *  mantra when…*" — we want the bare "I am light." for the renderer. */
 function extractNumberedList(subsection: ParsedSubsection): string[] {
   const out: string[] = [];
   const text = subsection.paragraphs.join(" ");
@@ -252,9 +257,28 @@ function extractNumberedList(subsection: ParsedSubsection): string[] {
   const re = /\b(\d{1,2})\.\s+([^]+?)(?=\s+\d{1,2}\.\s+\S|\s*$)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    out.push(m[2]!.replace(/\s+/g, " ").trim());
+    out.push(cleanListItem(m[2]!));
   }
-  return out;
+  return out.filter((s) => s.length > 0);
+}
+
+/** Strip markdown noise + verbose-AI commentary from a single list item.
+ *  Used by both `extractNumberedList` and `extractList` so mantras /
+ *  affirmations stay short and don't break the affirmation-page layout. */
+function cleanListItem(raw: string): string {
+  let s = raw.replace(/\s+/g, " ").trim();
+  // Drop everything after the first " * " or " ** " — Gemini uses these
+  // as a delimiter between the mantra and its explanatory commentary.
+  // The split MUST be on whitespace-bounded asterisks so we don't
+  // eat legitimate emphasis like "*you*" mid-sentence.
+  s = s.split(/\s\*+\s/, 1)[0]!.trim();
+  // Also drop bracketed commentary (some models do `[explanation: …]`).
+  s = s.replace(/\s*\[[^\]]+\]\s*$/g, "").trim();
+  // Strip surviving markdown bold / italic markers.
+  s = s.replace(/\*+/g, "").trim();
+  // Drop trailing colons / hyphens left over from "Mantra: text" splits.
+  s = s.replace(/^[:\-—]\s*/, "").trim();
+  return s;
 }
 
 /** Extract Morning/Midday/Evening mantra triplets from Chapter 10. */
@@ -281,9 +305,9 @@ function extractList(s: ParsedSubsection): string[] {
   const bullets = s.paragraphs
     .flatMap((p) => p.split("\n"))
     .filter((line) => /^\s*[-•*]\s+/.test(line))
-    .map((line) => line.replace(/^\s*[-•*]\s+/, "").trim());
-  if (bullets.length > 0) return bullets;
-  return s.paragraphs;
+    .map((line) => cleanListItem(line.replace(/^\s*[-•*]\s+/, "")));
+  if (bullets.length > 0) return bullets.filter((b) => b.length > 0);
+  return s.paragraphs.map(cleanListItem).filter((p) => p.length > 0);
 }
 
 /** Extract month-by-month forecast lines from Chapter 12. */

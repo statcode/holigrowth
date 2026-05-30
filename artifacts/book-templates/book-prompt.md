@@ -67,15 +67,42 @@ Provide a sweeping, personalized introduction to the reader's entire cosmic and 
 
 ### Chapter 2: Your Sun Sign — [Insert Sun Sign]
 
-Deliver a rich, personalized interpretation of the reader's Sun sign — her conscious identity, core purpose, and the energy she is here to express in this lifetime. Explore how this sign shows up across her three life pillars: love and relationships, wealth and career, and health and vitality. Address both the gifts and the shadow patterns of this sign, and speak directly to how she can lean into her solar energy for growth and fulfillment. **End with one `> ` blockquote pull quote.**
+A deep, four-section interpretation of the reader's Sun sign, written as 600–800 words in direct second-person voice ("you are…", "you appreciate…"). The chapter must open straight with a `## ` subsection heading (no salutation, no "Dear [Name]"). Use exactly these four `## ` subsections in order:
+
+1. **Your [Sun Sign] essence** — core identity, natural gifts, elemental quality, and how the energy shows up in daily life.
+2. **[Sun Sign] in love and connection** — who she is drawn to, what she brings to a relationship, what she most needs from a partner. Honor her sexual orientation and current relationship status.
+3. **[Sun Sign] at work and in the world** — professional calling, the work environments where she thrives, what drains her, and how her Life Path Number weaves in.
+4. **The deeper significance of [Sun Sign]** — the spiritual lesson or contribution this Sun is here to bring into the world.
+
+**Style guardrails — strictly enforce:** no em dashes (—) anywhere in the prose; use commas, periods, or "and" instead. No asterisks for emphasis. No markdown bold or italic inside the body. Keep sentences clear and active. Write traits as comma-separated phrases, not dash-separated.
+
+**End with one `> ` blockquote pull quote** (1–2 sentences in second-person).
 
 ### Chapter 3: Your Moon Sign — [Insert Moon Sign]
 
-Explore the reader's Moon sign as the seat of her emotional world, instinctive responses, and inner life. Describe what she needs to feel safe, nurtured, and emotionally fulfilled. Address how her Moon sign influences her intuition, her relationship with her body, and her subconscious patterns. Connect this placement to her healing journey and inner wisdom, speaking to the emotional terrain she navigates in love, work, and self-care. **End with one `> ` blockquote pull quote.**
+A deep, four-section interpretation of the reader's Moon sign, written as 600–800 words in direct second-person voice. The chapter must open straight with a `## ` subsection heading (no salutation). Use exactly these four `## ` subsections in order:
+
+1. **Your [Moon Sign] inner world** — emotional drives, instinctive responses, how she processes feelings, how she experiences emotional highs and lows.
+2. **[Moon Sign] Moon in relationships** — what she craves emotionally from close people, what makes her feel safe, what a dream partner looks like for her Moon. Honor her sexual orientation and current relationship status.
+3. **Your emotional roots and upbringing** — the early-life patterns this Moon often reflects: family dynamics, childhood environment, the inner narrative she may still carry. Stay warm and grounded, not diagnostic.
+4. **The importance of Moon in [Moon Sign]** — the lesson this Moon is here to teach: emotional strength, how to lead her inner world without fear.
+
+**Style guardrails:** same as Chapter 2 (no em dashes, no asterisks, no markdown emphasis, comma-separated traits).
+
+**End with one `> ` blockquote pull quote.**
 
 ### Chapter 4: Your Rising Sign — [Insert Rising Sign]
 
-Interpret the reader's Rising sign as the mask she wears, the first impression she makes, and the lens through which she approaches new experiences. Describe how this ascendant shapes her outward presence and the way others perceive her. Explore how her Rising sign interacts with her Sun and Moon to create her unique cosmic fingerprint — the blend of energies that makes her distinctly herself in the world. **End with one `> ` blockquote pull quote.**
+A deep, four-section interpretation of the reader's Rising sign, written as 600–800 words in direct second-person voice. The chapter must open straight with a `## ` subsection heading (no salutation). Use exactly these four `## ` subsections in order:
+
+1. **How the world first meets you** — the presence she carries into a room, how strangers perceive her in the first thirty seconds, body language, conversational style, social rhythm.
+2. **Ruled by your ruling planet** — the planet that rules this rising sign and how it shapes her natural rhythm, what fuels her, the patterns that come naturally because of it.
+3. **Where [Rising Sign] Rising shines in the world** — natural strengths (communication, creativity, leadership, networking, whichever fits the sign), and the roles and environments where this rising sign produces her best work.
+4. **Your shadow and your growth edge** — the flip side of this Rising sign: where her energy can feel scattered or self-defeating, and the practice or mindset that helps her grow past it. End warm.
+
+**Style guardrails:** same as Chapter 2 (no em dashes, no asterisks, no markdown emphasis).
+
+**End with one `> ` blockquote pull quote.**
 
 ### Chapter 5: Relationships — Love, Partnership & Soul Contracts
 

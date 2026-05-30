@@ -254,6 +254,19 @@ IMPORTANT:
  * generate just that one section. The order here is the order the
  * sections will appear in the final book.
  */
+/** Rendered onto a dedicated affirmation page, so every item must be a
+ *  single self-contained line — no explanatory parentheticals, no markdown
+ *  emphasis. Gemini in particular likes to append "* *Use this when…* *"
+ *  commentary; this guardrail told the model explicitly not to. The
+ *  parser also strips asterisks and trailing commentary as a defense in
+ *  depth (see parse.ts → cleanListItem). */
+const LIST_FORMAT_GUARDRAIL =
+  '\n\nIMPORTANT formatting rules for the affirmations list:\n' +
+  '- Format each item EXACTLY as: "N. [affirmation text]" (number, period, space, then the affirmation).\n' +
+  '- DO NOT add explanations, commentary, parenthetical asides, or "(why this works)" notes after any item.\n' +
+  '- DO NOT use markdown bold/italic (no `**word**` or `* commentary *` markers anywhere in the list).\n' +
+  '- DO NOT prefix items with labels like "Affirmation:" — just the number, period, and bare statement.';
+
 export function getBookSections(order: ZodiacOrder): BookSection[] {
   const metadata = extractZodiacMetadata(order.fullName, order.birthday, order.birthTime, order.birthLocation);
   const destinyNumber = getDestinyNumber(order.fullName);
@@ -302,32 +315,103 @@ export function getBookSections(order: ZodiacOrder): BookSection[] {
     {
       key: "ch2",
       title: `Chapter 2 — Your ${metadata.sunSign} Sun`,
-      userPrompt: wrap(`# Chapter 2: Your Sun Sign — ${metadata.sunSign}\nWrite 350–450 words across 3 paragraphs. Cover ${pronounPoss} ${metadata.sunSign} core identity, natural gifts, shadow patterns, and elemental energy. Briefly connect to love, wealth, and health.`),
+      // 600–800 words across 4 ## subsections so buildStandardBodyFlow fans
+      // out across 3–4 standard-body pages. Style modelled on the user's
+      // "Sun in Aquarius" reference — direct second-person voice, no em
+      // dashes, no flowery "Dearest X" openers, no asterisks for emphasis.
+      userPrompt: wrap(`# Chapter 2: Your Sun Sign — ${metadata.sunSign}
+
+Write 600–800 words across exactly 4 sections. Each section opens with a \`## \` heading (use the exact headings below). Use direct second-person voice ("you are…", "you appreciate…"), no third-person about ${order.fullName}. Do not begin with "Dear ${order.fullName}" or any salutation. Begin straight with the first \`## \` heading.
+
+## Your ${metadata.sunSign} essence
+150–200 words. Describe the core identity ${pronounPoss} ${metadata.sunSign} Sun gives ${pronounObj}: natural gifts, the way ${pronounPoss} energy shows up in everyday life, ${pronounPoss} elemental quality, and what makes ${pronounObj} unmistakably ${metadata.sunSign}. Lead with traits, follow with how those traits express themselves.
+
+## ${metadata.sunSign} in love and connection
+150–200 words. How ${pronounPoss} Sun shapes who ${pronounSub} is drawn to romantically, what ${pronounSub} brings into a relationship, and what ${pronounSub} most needs from a partner. Honor ${pronounPoss} sexual orientation (${orientation}) and current relationship status (${relStatus}).
+
+## ${metadata.sunSign} at work and in the world
+150–200 words. ${pronounPoss} professional calling, natural career strengths, the work environments that let ${pronounObj} thrive, and the kinds of work that drain ${pronounObj}. Where it fits naturally, weave in ${pronounPoss} Life Path ${metadata.lifePath}.
+
+## The deeper significance of ${metadata.sunSign}
+100–200 words. The spiritual lesson or contribution ${pronounPoss} ${metadata.sunSign} Sun is here to bring into the world. Close warm but grounded.
+
+After the last section, end the chapter with a single \`> \` blockquote pull-quote (1–2 sentences in second-person).
+
+STYLE GUARDRAILS — strictly enforce:
+- Use no em dashes (—) anywhere in the prose. Use commas, periods, or "and" instead. The chapter title above may keep em dashes, but the body prose must not contain them.
+- Use no asterisks (*) for emphasis.
+- Use no markdown bold/italic markers inside the body prose.
+- Do not list traits separated by em dashes. Use commas.
+- Keep sentences clear and active. No purple prose.`),
     },
     {
       key: "ch3",
       title: `Chapter 3 — Your ${metadata.moonSign} Moon`,
-      userPrompt: wrap(`# Chapter 3: Your Moon Sign — ${metadata.moonSign}\nWrite 350–450 words across 3 paragraphs. Cover ${pronounPoss} emotional inner world, what ${pronounSub} needs to feel safe, ${pronounPoss} intuitive gifts, and patterns to heal.`),
+      userPrompt: wrap(`# Chapter 3: Your Moon Sign — ${metadata.moonSign}
+
+Write 600–800 words across exactly 4 sections. Each section opens with a \`## \` heading. Use direct second-person voice ("you are…", "you crave…"). Do not begin with "Dear ${order.fullName}" or any salutation. Begin straight with the first \`## \` heading.
+
+## Your ${metadata.moonSign} inner world
+150–200 words. With the Moon in ${metadata.moonSign}, what drives ${pronounPoss} emotional life? Describe ${pronounPoss} instincts, how ${pronounSub} processes feelings, how ${pronounSub} experiences emotional highs and lows. Lead with the core emotional pattern, follow with how it shows up day to day.
+
+## ${metadata.moonSign} Moon in relationships
+150–200 words. What ${pronounSub} craves emotionally from people close to ${pronounObj}, what makes ${pronounObj} feel safe and held, and what a dream partner looks like for ${pronounPoss} ${metadata.moonSign} Moon. Honor ${pronounPoss} sexual orientation (${orientation}) and current relationship status (${relStatus}).
+
+## Your emotional roots and upbringing
+150–200 words. The early-life patterns ${pronounPoss} ${metadata.moonSign} Moon often reflects: family dynamics, childhood environment, the kind of emotional lessons ${pronounSub} likely learned young, and the inner narrative ${pronounSub} may still carry. Stay warm and grounded, not diagnostic.
+
+## The importance of Moon in ${metadata.moonSign}
+100–200 words. The lesson ${pronounPoss} ${metadata.moonSign} Moon is here to teach: emotional strength, how to lead ${pronounPoss} inner world without fear, and what wholeness looks like for ${pronounObj}.
+
+After the last section, end the chapter with a single \`> \` blockquote pull-quote (1–2 sentences in second-person).
+
+STYLE GUARDRAILS — strictly enforce:
+- Use no em dashes (—) anywhere in the prose. Use commas, periods, or "and" instead.
+- Use no asterisks (*) for emphasis.
+- Use no markdown bold/italic markers inside the body prose.
+- Keep sentences clear and active. No purple prose.`),
     },
     {
       key: "ch4",
       title: `Chapter 4 — Your ${metadata.risingSign} Rising`,
-      userPrompt: wrap(`# Chapter 4: Your Rising Sign — ${metadata.risingSign}\nWrite 300–400 words across 2 paragraphs. Cover how the world perceives ${pronounObj}, ${pronounPoss} social mask, and how ${metadata.risingSign} Rising interacts with ${pronounPoss} Sun and Moon.`),
+      userPrompt: wrap(`# Chapter 4: Your Rising Sign — ${metadata.risingSign}
+
+Write 600–800 words across exactly 4 sections. Each section opens with a \`## \` heading. Use direct second-person voice ("you come across as…", "you excel at…"). Do not begin with "Dear ${order.fullName}" or any salutation. Begin straight with the first \`## \` heading.
+
+## How the world first meets you
+150–200 words. ${metadata.risingSign} Rising gives ${pronounObj} a certain presence: the energy ${pronounSub} carries into a room, how strangers perceive ${pronounObj} in the first thirty seconds, what people sense before ${pronounSub} speaks. Lead with adjectives, follow with concrete examples (body language, conversational style, social rhythm).
+
+## Ruled by your ruling planet
+150–200 words. The planet that rules ${metadata.risingSign} and how it shapes ${pronounPoss} natural rhythm: what ${pronounSub} thrives on, what fuels ${pronounObj} mentally and emotionally, and the patterns that come naturally because of it.
+
+## Where ${metadata.risingSign} Rising shines in the world
+150–200 words. Natural strengths: communication, creativity, leadership, networking — whichever fits ${metadata.risingSign}. The roles and environments where this rising sign produces ${pronounPoss} best work, and how ${pronounSub} can leverage these strengths professionally and socially.
+
+## Your shadow and your growth edge
+100–200 words. The flip side of ${metadata.risingSign} Rising: where ${pronounPoss} energy can feel scattered, blocked, or self-defeating, and the practice or mindset that helps ${pronounObj} grow past it. End warm.
+
+After the last section, end the chapter with a single \`> \` blockquote pull-quote (1–2 sentences in second-person).
+
+STYLE GUARDRAILS — strictly enforce:
+- Use no em dashes (—) anywhere in the prose. Use commas, periods, or "and" instead.
+- Use no asterisks (*) for emphasis.
+- Use no markdown bold/italic markers inside the body prose.
+- Keep sentences clear and active. No purple prose.`),
     },
     {
       key: "ch5",
       title: "Chapter 5 — Love & Relationships",
-      userPrompt: wrap(`# Chapter 5: Love & Relationships — Your Cosmic Blueprint for Connection\nWrite 500–600 words across 3–4 paragraphs. This is the most personal chapter. Cover:\n- Sexual orientation is ${orientation} — write relationship guidance accurately reflecting who ${pronounSub} is attracted to (same-sex, opposite-sex, or both). Never assume heterosexuality unless specified.\n- Relationship status is ${relStatus} — tailor the love guidance accordingly. If single: focus on attracting and recognizing the right partner. If in a relationship/married: focus on deepening and sustaining connection. If divorced/widowed: focus on healing, self-love, and readiness for new love. If not seeking: focus on self-love, platonic connections, and fulfillment outside romance.\n- How ${pronounPoss} ${metadata.sunSign}/${metadata.moonSign} combination shapes love and attachment\n- The qualities ${pronounSub} attracts and karmic relationship lessons\n- What ${pronounSub} truly needs from a partner; Personal Year ${personalYear} love timing\n- Practical guidance for ${pronounPoss} relationships right now given ${pronounPoss} current status\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Relationship Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign}/${metadata.moonSign} combination, sexual orientation (${orientation}), and current relationship status (${relStatus}). Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific situation — not generic platitudes.`),
+      userPrompt: wrap(`# Chapter 5: Love & Relationships — Your Cosmic Blueprint for Connection\nWrite 500–600 words across 3–4 paragraphs. This is the most personal chapter. Cover:\n- Sexual orientation is ${orientation} — write relationship guidance accurately reflecting who ${pronounSub} is attracted to (same-sex, opposite-sex, or both). Never assume heterosexuality unless specified.\n- Relationship status is ${relStatus} — tailor the love guidance accordingly. If single: focus on attracting and recognizing the right partner. If in a relationship/married: focus on deepening and sustaining connection. If divorced/widowed: focus on healing, self-love, and readiness for new love. If not seeking: focus on self-love, platonic connections, and fulfillment outside romance.\n- How ${pronounPoss} ${metadata.sunSign}/${metadata.moonSign} combination shapes love and attachment\n- The qualities ${pronounSub} attracts and karmic relationship lessons\n- What ${pronounSub} truly needs from a partner; Personal Year ${personalYear} love timing\n- Practical guidance for ${pronounPoss} relationships right now given ${pronounPoss} current status\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Relationship Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, ${metadata.sunSign}/${metadata.moonSign} combination, sexual orientation (${orientation}), and current relationship status (${relStatus}). Each affirmation must be a complete first-person statement (not a fragment) and must speak to ${pronounPoss} specific situation — not generic platitudes.${LIST_FORMAT_GUARDRAIL}`),
     },
     {
       key: "ch6",
       title: "Chapter 6 — Wealth & Abundance",
-      userPrompt: wrap(`# Chapter 6: Wealth & Abundance — Your Cosmic Path to Prosperity\nWrite 500–600 words across 3–4 paragraphs:\n- Life Path ${metadata.lifePath} wealth archetype; natural gifts and money blind spots for ${metadata.sunSign}\n- Destiny Number ${destinyNumber} and abundance beliefs to reprogram\n- Best aligned income paths; Personal Year ${personalYear} financial timing\n- Two practical abundance practices for ${pronounPoss} signs\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Wealth Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, Destiny Number ${destinyNumber}, ${metadata.sunSign} money archetype, and Personal Year ${personalYear} timing.`),
+      userPrompt: wrap(`# Chapter 6: Wealth & Abundance — Your Cosmic Path to Prosperity\nWrite 500–600 words across 3–4 paragraphs:\n- Life Path ${metadata.lifePath} wealth archetype; natural gifts and money blind spots for ${metadata.sunSign}\n- Destiny Number ${destinyNumber} and abundance beliefs to reprogram\n- Best aligned income paths; Personal Year ${personalYear} financial timing\n- Two practical abundance practices for ${pronounPoss} signs\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Wealth Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s Life Path ${metadata.lifePath}, Destiny Number ${destinyNumber}, ${metadata.sunSign} money archetype, and Personal Year ${personalYear} timing.${LIST_FORMAT_GUARDRAIL}`),
     },
     {
       key: "ch7",
       title: "Chapter 7 — Health & Vitality",
-      userPrompt: wrap(`# Chapter 7: Health & Vitality — Your Body's Cosmic Code\nWrite 500–600 words across 3–4 paragraphs:\n- Body zones and energy systems linked to ${metadata.sunSign}, ${metadata.moonSign}, ${metadata.risingSign}\n- What drains vs. replenishes ${pronounObj}; stress patterns and seasonal rhythms\n- Two mind-body practices designed for ${pronounPoss} cosmic blueprint\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Health Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s ${metadata.sunSign} body zones, ${metadata.moonSign} emotional-body needs, and ${metadata.risingSign} energetic patterns.`),
+      userPrompt: wrap(`# Chapter 7: Health & Vitality — Your Body's Cosmic Code\nWrite 500–600 words across 3–4 paragraphs:\n- Body zones and energy systems linked to ${metadata.sunSign}, ${metadata.moonSign}, ${metadata.risingSign}\n- What drains vs. replenishes ${pronounObj}; stress patterns and seasonal rhythms\n- Two mind-body practices designed for ${pronounPoss} cosmic blueprint\n\nAfter the chapter body, before the pull quote, include a section titled exactly "## Your 10 Health Affirmations" — write exactly 10 first-person affirmations (one per line, numbered 1–10) tailored to ${order.fullName}'s ${metadata.sunSign} body zones, ${metadata.moonSign} emotional-body needs, and ${metadata.risingSign} energetic patterns.${LIST_FORMAT_GUARDRAIL}`),
     },
     {
       key: "ch8",
@@ -342,7 +426,7 @@ export function getBookSections(order: ZodiacOrder): BookSection[] {
     {
       key: "ch10",
       title: "Chapter 10 — Your Daily Mantras",
-      userPrompt: wrap(`# Chapter 10: Your Daily Mantras\nWrite 300–400 words. Open with one short paragraph (3–4 sentences) on how to use a mantra — pair it with breath, repeat silently in transit, on a walk, before sleep. Then list exactly 9 mantras under three subheadings — "## Morning" (3 mantras), "## Midday" (3 mantras), "## Evening" (3 mantras) — one per line. Each mantra: 3–7 words, first person, rooted in Life Path ${metadata.lifePath}, ${metadata.sunSign} energy, and Personal Year ${personalYear}. Say-aloud language, not flowery prose.`),
+      userPrompt: wrap(`# Chapter 10: Your Daily Mantras\nWrite 300–400 words. Open with one short paragraph (3–4 sentences) on how to use a mantra — pair it with breath, repeat silently in transit, on a walk, before sleep. Then list exactly 9 mantras under three subheadings — "## Morning" (3 mantras), "## Midday" (3 mantras), "## Evening" (3 mantras) — one per line.\n\nEach mantra MUST follow this exact format:\n  N. [3-to-7-word mantra]\n\nDO NOT include explanations, commentary, parenthetical asides, or any text after the mantra itself. DO NOT use markdown bold/italic (no asterisks anywhere). DO NOT prefix mantras with labels like "Mantra:" — just the number, a period, and the bare mantra. The mantras must read as something the reader can actually say aloud in under three seconds.\n\nGood: "1. I am light, and I rise."\nBad: "1. I am light, and I rise. * *This morning mantra harnesses your Sun energy…* *"\n\nEach mantra: first person, rooted in Life Path ${metadata.lifePath}, ${metadata.sunSign} energy, and Personal Year ${personalYear}. Say-aloud language, not flowery prose.`),
     },
     {
       key: "ch11",

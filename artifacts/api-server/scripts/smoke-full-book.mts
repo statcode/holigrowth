@@ -159,24 +159,34 @@ const content = [
       { heading: "Reading the sky as a map", paragraphs: longParas(2, "your cosmic blueprint") },
     ],
     "The map is not the verdict; it is the invitation to walk the territory you were born to walk."),
+  // Ch 2/3/4 now use 4 subsections each (per the updated book-prompt.md)
+  // so they fan out across 3–4 standard-body pages instead of the previous
+  // single-page render. Sun/Moon/Rising sections follow the user's
+  // reference style: essence → relationships → world/upbringing → meaning.
   chapter(2, "Your Sun Sign", "Leo · The Radiant Heart",
     [
-      { heading: "Leo light, Leo work", paragraphs: longParas(3, "the work of letting yourself shine") },
-      { heading: "The shadow of the sun", paragraphs: longParas(2, "your shadow of self-erasure") },
+      { heading: "Your Leo essence", paragraphs: longParas(3, "the work of letting yourself shine") },
+      { heading: "Leo in love and connection", paragraphs: longParas(2, "the work of letting yourself be loved") },
+      { heading: "Leo at work and in the world", paragraphs: longParas(2, "the calling that asks for your full voice") },
+      { heading: "The deeper significance of Leo", paragraphs: longParas(2, "your shadow of self-erasure and the medicine of being seen") },
     ],
-    "Your shine is not a performance — it is the natural posture of a heart that has remembered itself."),
+    "Your shine is not a performance, it is the natural posture of a heart that has remembered itself."),
   chapter(3, "Your Moon Sign", "Cancer · The Tender Keeper",
     [
-      { heading: "What the moon protects", paragraphs: longParas(2, "the work of emotional fluency") },
-      { heading: "Tides and rituals", paragraphs: longParas(2, "your private inner sea") },
+      { heading: "Your Cancer inner world", paragraphs: longParas(3, "the work of emotional fluency") },
+      { heading: "Cancer Moon in relationships", paragraphs: longParas(2, "the people who feel like home to your inner sea") },
+      { heading: "Your emotional roots and upbringing", paragraphs: longParas(2, "the kitchen, the kept things, and the lessons of early love") },
+      { heading: "The importance of Moon in Cancer", paragraphs: longParas(2, "your private inner sea and the strength of feeling deeply") },
     ],
-    "You feel everything at full volume — and that sensitivity is not a flaw to manage, but a frequency you were tuned to."),
+    "You feel everything at full volume, and that sensitivity is not a flaw to manage but a frequency you were tuned to."),
   chapter(4, "Your Rising Sign", "Libra · The Diplomatic Face",
     [
-      { heading: "The mask and the mirror", paragraphs: longParas(2, "the work of being seen") },
-      { heading: "How Libra holds the room", paragraphs: longParas(2, "your aesthetic intelligence") },
+      { heading: "How the world first meets you", paragraphs: longParas(3, "the doorway your presence becomes") },
+      { heading: "Ruled by Venus", paragraphs: longParas(2, "your aesthetic intelligence and the rhythm Venus gives you") },
+      { heading: "Where Libra Rising shines in the world", paragraphs: longParas(2, "the rooms where your gift for balance becomes leadership") },
+      { heading: "Your shadow and your growth edge", paragraphs: longParas(2, "the work of choosing yourself when harmony asks you to disappear") },
     ],
-    "Your rising is a doorway, not a disguise — and the people who pass through it become the most loved in your life."),
+    "Your rising is a doorway, not a disguise, and the people who pass through it become the most loved in your life."),
   chapter(5, "Relationships", "Love, Partnership & Soul Contracts",
     [
       { heading: "Venus & the architecture of love", paragraphs: longParas(2, "the work of choosing on purpose") },
