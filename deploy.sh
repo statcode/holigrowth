@@ -8,12 +8,16 @@
 # `set -e` aborts immediately on any failed step — better than barreling on
 # and leaving a half-built dist/ paired with the old api-server bundle.
 #
-# Historical note: this script used to export PM2_HOME=$HOME/public_html/
-# .pm2-holigrowth/ because Cloudways had created ~/ with no write access for
-# the SSH user, so pm2 couldn't make its default ~/.pm2/. Cloudways support
-# fixed that for the syffkdguxx app on 2026-05-27 by creating ~/.pm2/ owned
-# by user, mode 775 — matching how the colorgifts app was already set up.
-# The workaround is now removed; deploys use the standard pm2 location.
+# ─── Cloudways PM2_HOME workaround (re-added 2026-05-30) ────────────────────
+# Cloudways' "Reset File/Folders Permissions" button (Application Settings →
+# General) reverts ~/.pm2/ back to root ownership, which crashes pm2 with
+# "EACCES: permission denied, mkdir '/home/.../.pm2/logs'". Support fixed it
+# once on 2026-05-27, but it reverted, so we keep PM2_HOME pointed at a
+# directory we always own. The dir is created on first run if missing.
+# Removable if/when Cloudways stops resetting home-dir perms.
+export PM2_HOME="$HOME/public_html/.pm2-holigrowth"
+mkdir -p "$PM2_HOME"
+
 set -e
 
 # Always run from the script's own directory — lets the user invoke this
