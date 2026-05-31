@@ -311,13 +311,18 @@ const STYLES: Record<string, PlaceholderStyle> = {
   // Natal-chart feature page (page 2, right after the TOC). READER_NAME is
   // the prominent serif headline above the wheel. BIRTH_DATE / BIRTH_TIME /
   // BIRTH_LOCATION sit beneath the wheel in the "BORN AT … IN …" band — small
-  // and italic, matching the engraved label look. NATAL_CHART is the image-
-  // stamp slot for the per-reader wheel PNG (not yet generated; see
-  // natal-chart-claude-code-prompt.md), so we leave it without a text style.
+  // and italic, matching the engraved label look. The widgets are narrow
+  // (BIRTH_TIME = 53pt, BIRTH_LOCATION = 58pt) so we keep them tight with
+  // autoShrink: a long "San Diego, California, USA" location text gets
+  // scaled down rather than overflowing left into the baked "IN" label or
+  // right into the page margin. Left-aligned so the engraved-label reading
+  // order ("IN [location]") stays intact. NATAL_CHART is the image-stamp
+  // slot for the per-reader wheel PNG; no style needed since we draw the
+  // stylized vector wheel directly (no text fill).
   READER_NAME:         { weight: "display", size: 26, color: "fg",   align: "center", autoShrink: true, minSize: 16 },
-  BIRTH_DATE:          { weight: "italic",  size: 11, color: "fg",   align: "center" },
-  BIRTH_TIME:          { weight: "italic",  size: 10, color: "fg",   align: "center" },
-  BIRTH_LOCATION:      { weight: "italic",  size: 10, color: "fg",   align: "center" },
+  BIRTH_DATE:          { weight: "italic",  size: 11, color: "fg",   align: "center", autoShrink: true, minSize: 8 },
+  BIRTH_TIME:          { weight: "italic",  size: 10, color: "fg",   align: "left",   autoShrink: true, minSize: 7 },
+  BIRTH_LOCATION:      { weight: "italic",  size: 10, color: "fg",   align: "left",   autoShrink: true, minSize: 6 },
 };
 
 const DEFAULT_STYLE: PlaceholderStyle = { weight: "regular", size: 11.5, color: "fg", align: "left" };
@@ -891,13 +896,13 @@ async function buildBirthstonePage(ctx: BuildCtx, ch: ParsedChapter): Promise<vo
 }
 
 /** "Your Cosmic Blueprint" page — page 2, right after the TOC. Fills the
- *  reader's name + birth date / time / location into the engraved-style band.
- *  The NATAL_CHART image widget is left untouched for now so the template
- *  artwork's decorative wheel + "planets · houses · aspect lines" stand-in
- *  remain visible. Per-reader wheel-image generation is a follow-up tracked
- *  in `artifacts/book-templates/natal-chart-claude-code-prompt.md`; once that
- *  pipeline produces a PNG buffer, embed it via pdf-lib's `embedPng` and
- *  `page.drawImage` at the NATAL_CHART rect (see helper comment below). */
+ *  reader's name + birth date / time / location into the engraved-style band
+ *  and draws a stylized natal-chart wheel using the customer's Sun, Moon, and
+ *  Rising signs. The wheel is intentionally NOT astronomically accurate —
+ *  it's a placeholder until the real chart-wheel image-generation pipeline
+ *  ships (see `artifacts/book-templates/natal-chart-claude-code-prompt.md`).
+ *  When that pipeline produces a per-reader PNG buffer, replace
+ *  `drawStylizedNatalWheel` with a `page.drawImage(embedPng(buf), …)` call. */
 async function buildNatalChartPage(ctx: BuildCtx): Promise<void> {
   const { page, pageType } = await newPageFromTemplate(ctx, "natal-chart");
   if (!pageType) return;
@@ -919,15 +924,128 @@ async function buildNatalChartPage(ctx: BuildCtx): Promise<void> {
   fill("BIRTH_TIME", birthTime);
   fill("BIRTH_LOCATION", birthLocation);
 
-  // NATAL_CHART widget (currently named NATAL_CHART in the PDF; the future
-  // designer-renamed slot is NATAL_DIAGRAM). When a per-reader wheel PNG
-  // generator lands, replace the below with:
-  //   const slot = getSlot(pageType, "NATAL_CHART");
-  //   const png = await ctx.out.embedPng(wheelPngBuf);
-  //   const rectY = slot.y - Math.max(slot.h - 12, 4);
-  //   page.drawImage(png, { x: slot.x, y: rectY, width: slot.w, height: slot.h });
-  // Until then, leave the widget rect untouched so the artwork's decorative
-  // wheel + "planets · houses · aspect lines" stand-in shows through.
+  // Stylized wheel — Sun + Moon + Rising markers + a thin aspect line.
+  drawStylizedNatalWheel(rc, ctx.order);
+}
+
+/** Math angle (in degrees, math convention with 0° pointing right and CCW
+ *  positive) for each zodiac sign on the template's wheel. The artwork places
+ *  Aries at 9 o'clock and the signs flow CW around the wheel — which
+ *  corresponds to decreasing math angle. Calibrated empirically against
+ *  10-natal-chart-editable.pdf; if the designer rotates the wheel, re-tune
+ *  here rather than in every caller. */
+const NATAL_WHEEL_SIGN_ANGLE_DEG: Record<string, number> = {
+  Aries: 180, Taurus: 210, Gemini: 240, Cancer: 270, Leo: 300, Virgo: 330,
+  Libra: 0,   Scorpio: 30, Sagittarius: 60, Capricorn: 90, Aquarius: 120, Pisces: 150,
+};
+
+/** Visual centre of the wheel artwork (the cream inner circle) in PDF user
+ *  space. The NATAL_CHART AcroForm widget is positioned ~33pt ABOVE the
+ *  actual visual centre — it's an anchor for where the future stamped wheel
+ *  PNG should land, not where the existing "planets · houses · aspect
+ *  lines" stand-in text sits. The real text + visual disc midpoint is at
+ *  y ≈ 277, determined by drawing test rectangles at successive y-values
+ *  and confirming when they fully covered the stand-in. */
+const NATAL_WHEEL_CENTER_X = 225;
+const NATAL_WHEEL_CENTER_Y = 277;
+/** Radius (pt) where the Sun/Moon/Rising markers are placed. The visible
+ *  cream disc has a radius of ≈ 130 pt; markers at 80 pt sit well inside
+ *  the gold zodiac ring and leave room for the marker labels (which are
+ *  pushed 9pt further outward by `drawStylizedNatalWheel`). */
+const NATAL_WHEEL_MARKER_RADIUS = 80;
+
+/** Draw the placeholder natal-chart wheel using only Sun, Moon, and Rising
+ *  signs from the order. Three markers are placed at the angular positions
+ *  of the customer's signs (e.g. Sun in Leo → 5 o'clock on the wheel), each
+ *  with a short label, plus a thin aspect line connecting Sun and Moon to
+ *  visually reinforce that every chart is unique. */
+function drawStylizedNatalWheel(rc: RenderCtx, order: ZodiacOrder): void {
+  // 1. Mask the baked-in "planets · houses · aspect lines" stand-in text so
+  //    our markers don't overlap it. The artwork prints that label centred
+  //    on the wheel (y ≈ 380), in a horizontal band ~12pt tall. We can't use
+  //    drawMaskRect here because that paints PAGE_BG (the page's cream),
+  //    which is slightly LIGHTER than the wheel's inner parchment disc and
+  //    shows up as a visible cream stripe. Paint the disc's actual parchment
+  //    colour (#f3e9d2 per the template's hand-off prompt) so the mask
+  //    blends in.
+  // Mask the baked-in "planets · houses · aspect lines" stand-in text. The
+  // text was determined to sit between y=255 and y=300 by drawing
+  // increasingly narrow test rectangles; centre is around y=278 with the
+  // text band ~12pt tall. We paint a generous 45pt-tall band so antialias
+  // halos don't leave a visible edge. Cream colour (#f3e9d2) matches the
+  // disc's parchment fill so the mask blends invisibly into the disc.
+  rc.page.drawRectangle({
+    x: 90,
+    y: 255,
+    width: 270,
+    height: 45,
+    color: rgb(243/255, 233/255, 210/255),
+  });
+
+  const cx = NATAL_WHEEL_CENTER_X;
+  const cy = NATAL_WHEEL_CENTER_Y;
+  const r = NATAL_WHEEL_MARKER_RADIUS;
+  const gold = rgb(GOLD[0], GOLD[1], GOLD[2]);
+  const ink = rgb(...PAGE_FG["natal-chart"]);
+  const labelFont = rc.fonts.bold;
+  const labelSize = 7;
+
+  // Resolve each marker's position from its sign. Default to the centre if
+  // the sign is unknown — the chart still renders, just without that marker.
+  type Marker = { label: string; sign: string | null };
+  const markers: Marker[] = [
+    { label: "SUN",  sign: order.sunSign ?? null },
+    { label: "MOON", sign: order.moonSign ?? null },
+    { label: "ASC",  sign: order.risingSign ?? null },
+  ];
+
+  const positions = markers.map((m) => {
+    const angle = m.sign ? NATAL_WHEEL_SIGN_ANGLE_DEG[m.sign] : undefined;
+    if (angle === undefined) return null;
+    const rad = (angle * Math.PI) / 180;
+    return { label: m.label, x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }).filter((p): p is { label: string; x: number; y: number } => p !== null);
+
+  // 2. Thin aspect line connecting Sun and Moon (the two most meaningful
+  //    luminaries in a natal chart). Drawn first so markers sit on top.
+  const sun = positions.find((p) => p.label === "SUN");
+  const moon = positions.find((p) => p.label === "MOON");
+  if (sun && moon) {
+    rc.page.drawLine({
+      start: { x: sun.x, y: sun.y },
+      end: { x: moon.x, y: moon.y },
+      thickness: 0.4,
+      color: gold,
+      opacity: 0.45,
+    });
+  }
+
+  // 3. Each marker: a small filled gold disc with a darker outline + a label
+  //    placed just outside the disc, oriented toward the wheel centre so it
+  //    never collides with the gold zodiac ring.
+  for (const { label, x, y } of positions) {
+    rc.page.drawCircle({ x, y, size: 3.5, color: gold });
+    rc.page.drawCircle({ x, y, size: 3.5, borderColor: ink, borderWidth: 0.5 });
+
+    // Place the label radially outward from the centre by ~9pt so it sits
+    // adjacent to the marker without touching it.
+    const dx = x - cx;
+    const dy = y - cy;
+    const dist = Math.hypot(dx, dy);
+    const lx = x + (dx / dist) * 9;
+    const ly = y + (dy / dist) * 9;
+    const labelW = labelFont.widthOfTextAtSize(label, labelSize);
+    rc.page.drawText(label, {
+      x: lx - labelW / 2,
+      y: ly - labelSize / 2,
+      size: labelSize,
+      font: labelFont,
+      color: ink,
+    });
+  }
+
+  // 4. A small centre dot to anchor the eye and suggest the chart's origin.
+  rc.page.drawCircle({ x: cx, y: cy, size: 1.5, color: ink });
 }
 
 /** "December 13, 1981" from "1981-12-13". Falls back to the raw value if it
