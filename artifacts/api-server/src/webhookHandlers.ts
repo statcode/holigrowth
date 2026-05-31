@@ -1,7 +1,7 @@
 import { getUncachableStripeClient, getWebhookSecret } from './stripeClient';
 import { db, zodiacOrdersTable, eq } from '@workspace/db';
 import { logger } from './lib/logger';
-import { sendOrderConfirmationEmail } from './routes/zodiac-orders/mailerlite';
+import { sendOrderConfirmationEmail, moveToBuyersList } from './routes/zodiac-orders/mailerlite';
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
@@ -44,6 +44,15 @@ export class WebhookHandlers {
           sendOrderConfirmationEmail(order).catch((err) =>
             logger.warn({ err, orderId }, 'Confirmation email failed'),
           );
+
+          // Move the subscriber from the Prospect group to the Buyers group
+          // in MailerLite. Fire-and-forget — `moveToBuyersList` swallows its
+          // own errors so a CRM hiccup never blocks marking the order paid.
+          if (order.email) {
+            moveToBuyersList(order.email, order.fullName).catch((err) =>
+              logger.warn({ err, orderId }, 'Move-to-Buyers failed'),
+            );
+          }
         }
       }
     }

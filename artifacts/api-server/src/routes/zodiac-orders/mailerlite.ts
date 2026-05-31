@@ -45,6 +45,7 @@ function buildToList(
 // Classic MailerLite API (api.mailerlite.com) — used for subscriber management
 const MAILERLITE_CLASSIC_API_URL = "https://api.mailerlite.com/api/v2";
 const HOLIGROWTH_PROSPECT_GROUP_ID = "113181813";
+const HOLIGROWTH_BUYERS_GROUP_ID = "113194420";
 
 function classicHeaders(apiKey: string): Record<string, string> {
   return {
@@ -114,6 +115,81 @@ export async function subscribeToMailerLite(email: string, fullName: string): Pr
     const message = err instanceof Error ? err.message : String(err);
     logger.warn({ err, email }, "MailerLite request threw");
     return { ok: false, reason: "network_error", message };
+  }
+}
+
+/**
+ * Move a subscriber from the Prospect group → Buyers group. Called from the
+ * Stripe webhook handler on `checkout.session.completed` so paid customers
+ * exit the prospect-funnel automations and enter the customer-lifecycle ones.
+ *
+ * Best-effort: both the add and the remove are independent fetches and we
+ * log + continue on either failure. Specifically tolerated:
+ *   - 422 / "already in group" when adding to Buyers (subscriber may have
+ *     bought a previous book or been pre-seeded by a CSV import)
+ *   - 404 when removing from Prospects (subscriber may have purchased
+ *     without ever entering their email through the /create funnel — e.g.
+ *     direct Stripe checkout, or admin-created order)
+ *
+ * Never throws — this lives in the webhook hot path and a CRM hiccup must
+ * not stop the order from being marked paid.
+ */
+export async function moveToBuyersList(email: string, fullName: string): Promise<void> {
+  const apiKey = process.env.MAILERLITE_API_KEY;
+  if (!apiKey) {
+    logger.warn("MAILERLITE_API_KEY not set — skipping move-to-buyers");
+    return;
+  }
+  if (!email) {
+    logger.info("No email — skipping move-to-buyers");
+    return;
+  }
+
+  // 1. Add to Buyers group. POST is idempotent in MailerLite Classic —
+  //    re-adding an existing subscriber just refreshes the row.
+  try {
+    const addResp = await fetch(
+      `${MAILERLITE_CLASSIC_API_URL}/groups/${HOLIGROWTH_BUYERS_GROUP_ID}/subscribers`,
+      {
+        method: "POST",
+        headers: classicHeaders(apiKey),
+        body: JSON.stringify({
+          email,
+          name: fullName.trim(),
+          fields: { first_name: fullName.trim().split(/\s+/)[0] ?? "" },
+        }),
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!addResp.ok) {
+      const body = await addResp.text();
+      logger.warn({ status: addResp.status, body, email }, "MailerLite add-to-Buyers failed");
+    } else {
+      logger.info({ email }, "MailerLite subscriber added to Buyers group");
+    }
+  } catch (err) {
+    logger.warn({ err, email }, "MailerLite add-to-Buyers threw");
+  }
+
+  // 2. Remove from Prospect group. 404 means they weren't in the group —
+  //    treat as success (idempotent semantics).
+  try {
+    const removeResp = await fetch(
+      `${MAILERLITE_CLASSIC_API_URL}/groups/${HOLIGROWTH_PROSPECT_GROUP_ID}/subscribers/${encodeURIComponent(email)}`,
+      {
+        method: "DELETE",
+        headers: classicHeaders(apiKey),
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!removeResp.ok && removeResp.status !== 404) {
+      const body = await removeResp.text();
+      logger.warn({ status: removeResp.status, body, email }, "MailerLite remove-from-Prospect failed");
+    } else {
+      logger.info({ email, status: removeResp.status }, "MailerLite subscriber removed from Prospect group");
+    }
+  } catch (err) {
+    logger.warn({ err, email }, "MailerLite remove-from-Prospect threw");
   }
 }
 

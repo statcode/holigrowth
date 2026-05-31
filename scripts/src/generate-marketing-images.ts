@@ -125,6 +125,7 @@ async function main(): Promise<void> {
   // Render each via the production smoke runner so the marketing image
   // shows realistic content (mock customer data, real prose).
   const interiors: { id: string; out: string }[] = [
+    { id: "natal-chart",      out: "book-interior-natal-chart.png" },
     { id: "chapter-opener",   out: "book-interior-opener.png" },
     { id: "standard-body",    out: "book-interior-body.png" },
     { id: "affirmations",     out: "book-interior-affirmation.png" },

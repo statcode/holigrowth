@@ -64,10 +64,11 @@ export default function Home() {
   const [activeThumb, setActiveThumb] = useState(0);
 
   const thumbs = [
-    { src: "/images/book-cover-mockup.png",       alt: "Holistic Growth Life Path — front cover" },
-    { src: "/images/book-cover-mockup2.png",      alt: "Holistic Growth Life Path — cosmic mockup" },
-    { src: "/images/book-interior-opener.png",    alt: "Interior — chapter opener" },
-    { src: "/images/book-interior-body.png",      alt: "Interior — Moon Sign chapter body" },
+    { src: "/images/book-cover-mockup.png",        alt: "Holistic Growth Life Path — front cover" },
+    { src: "/images/book-cover-mockup2.png",       alt: "Holistic Growth Life Path — cosmic mockup" },
+    { src: "/images/book-interior-natal-chart.png", alt: "Interior — your personal natal-chart blueprint" },
+    { src: "/images/book-interior-opener.png",     alt: "Interior — chapter opener" },
+    { src: "/images/book-interior-body.png",       alt: "Interior — Moon Sign chapter body" },
     { src: "/images/book-interior-affirmation.png", alt: "Interior — affirmation page" },
     { src: "/images/book-interior-numerology.png", alt: "Interior — numerology data card" },
     { src: "/images/book-interior-birthstone.png", alt: "Interior — birthstone talisman (BONUS Chapter 13)" },
@@ -131,7 +132,7 @@ export default function Home() {
                 </div>
               </div>
               {/* Thumbnails */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-8 gap-2">
                 {thumbs.map((t, i) => (
                   <button
                     key={i}
