@@ -49,7 +49,8 @@ export type PageTypeKey =
   | "body-continued"
   | "zodiac-moon"
   | "zodiac-rising"
-  | "birthstone";
+  | "birthstone"
+  | "natal-chart";
 
 export type RecipeStep = PageTypeKey | "zodiac-sign" | "standard-body+";
 
@@ -81,7 +82,17 @@ export interface ClosingRecipe {
   templates: RecipeStep[];
 }
 
-export type Recipe = PartRecipe | ChapterRecipe | WelcomeRecipe | ClosingRecipe;
+/** Standalone "Your Cosmic Blueprint" feature page (the natal-chart wheel page
+ *  that sits at page 2 right after the TOC). Its own section kind so the
+ *  recipe walker can dispatch directly to `buildNatalChartPage` without
+ *  inventing a "chapter" or pretending it's a welcome variant. */
+export interface NatalChartRecipe {
+  section: "natal-chart";
+  title: string;
+  templates: RecipeStep[];
+}
+
+export type Recipe = PartRecipe | ChapterRecipe | WelcomeRecipe | ClosingRecipe | NatalChartRecipe;
 
 export interface Manifest {
   spec: {

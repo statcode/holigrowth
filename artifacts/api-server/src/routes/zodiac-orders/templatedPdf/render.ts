@@ -61,6 +61,7 @@ const PAGE_BG: Record<PageTypeKey, [number, number, number]> = {
   "zodiac-moon": TEMPLATE_CREAM,
   "zodiac-rising": TEMPLATE_CREAM,
   "birthstone": TEMPLATE_CREAM,
+  "natal-chart": TEMPLATE_CREAM,
 };
 
 // Foreground text colours for each template's body copy.
@@ -79,6 +80,7 @@ const PAGE_FG: Record<PageTypeKey, [number, number, number]> = {
   "zodiac-moon": [0.13, 0.10, 0.18],
   "zodiac-rising": [0.13, 0.10, 0.18],
   "birthstone": [0.13, 0.10, 0.18],
+  "natal-chart": [0.13, 0.10, 0.18],
 };
 
 const GOLD: [number, number, number] = [0.79, 0.66, 0.30];
@@ -305,6 +307,17 @@ const STYLES: Record<string, PlaceholderStyle> = {
   // tagline below it in gold italic, so a single widget hosts two visually
   // distinct rows of copy.
   BIRTHSTONE_BODY:     { weight: "italic",  size: 11, color: "fg",   align: "center", wrapWidth: 240, leading: 1.3 },
+
+  // Natal-chart feature page (page 2, right after the TOC). READER_NAME is
+  // the prominent serif headline above the wheel. BIRTH_DATE / BIRTH_TIME /
+  // BIRTH_LOCATION sit beneath the wheel in the "BORN AT … IN …" band — small
+  // and italic, matching the engraved label look. NATAL_CHART is the image-
+  // stamp slot for the per-reader wheel PNG (not yet generated; see
+  // natal-chart-claude-code-prompt.md), so we leave it without a text style.
+  READER_NAME:         { weight: "display", size: 26, color: "fg",   align: "center", autoShrink: true, minSize: 16 },
+  BIRTH_DATE:          { weight: "italic",  size: 11, color: "fg",   align: "center" },
+  BIRTH_TIME:          { weight: "italic",  size: 10, color: "fg",   align: "center" },
+  BIRTH_LOCATION:      { weight: "italic",  size: 10, color: "fg",   align: "center" },
 };
 
 const DEFAULT_STYLE: PlaceholderStyle = { weight: "regular", size: 11.5, color: "fg", align: "left" };
@@ -746,7 +759,10 @@ function drawTOCContent(ctx: BuildCtx): void {
   type Row = { kind: "section" | "part" | "chapter" | "closing"; label: string; page: number };
   const rows: Row[] = [];
   for (const r of ctx.manifest.chapterRecipes) {
-    if (r.section === "welcome") {
+    if (r.section === "natal-chart") {
+      const p = ctx.chapterStarts.get("natal-chart");
+      if (p) rows.push({ kind: "section", label: r.title || "Your Cosmic Blueprint", page: p });
+    } else if (r.section === "welcome") {
       const p = ctx.chapterStarts.get("welcome");
       if (p) rows.push({ kind: "section", label: r.title || "Welcome", page: p });
     } else if (r.section === "part") {
@@ -872,6 +888,62 @@ async function buildBirthstonePage(ctx: BuildCtx, ch: ParsedChapter): Promise<vo
 
   const bodySlot = getSlot(pageType, "BIRTHSTONE_BODY");
   if (bodySlot) drawBirthstoneCaption(rc, bodySlot, stone);
+}
+
+/** "Your Cosmic Blueprint" page — page 2, right after the TOC. Fills the
+ *  reader's name + birth date / time / location into the engraved-style band.
+ *  The NATAL_CHART image widget is left untouched for now so the template
+ *  artwork's decorative wheel + "planets · houses · aspect lines" stand-in
+ *  remain visible. Per-reader wheel-image generation is a follow-up tracked
+ *  in `artifacts/book-templates/natal-chart-claude-code-prompt.md`; once that
+ *  pipeline produces a PNG buffer, embed it via pdf-lib's `embedPng` and
+ *  `page.drawImage` at the NATAL_CHART rect (see helper comment below). */
+async function buildNatalChartPage(ctx: BuildCtx): Promise<void> {
+  const { page, pageType } = await newPageFromTemplate(ctx, "natal-chart");
+  if (!pageType) return;
+  const rc: RenderCtx = { page, fonts: ctx.fonts, pageType: "natal-chart" };
+
+  const fullName = (ctx.order.fullName ?? "").trim();
+  const birthDate = formatLongDate(ctx.order.birthday);
+  const birthTime = (ctx.order.birthTime ?? "").trim();
+  const birthLocation = (ctx.order.birthLocation ?? "").trim();
+
+  const fill = (name: string, value: string) => {
+    const slot = getSlot(pageType, name);
+    if (slot && value) fillSlot(rc, name, slot, value);
+    else if (slot) maskSlot(rc, slot);
+  };
+
+  fill("READER_NAME", fullName.toUpperCase());
+  fill("BIRTH_DATE", birthDate);
+  fill("BIRTH_TIME", birthTime);
+  fill("BIRTH_LOCATION", birthLocation);
+
+  // NATAL_CHART widget (currently named NATAL_CHART in the PDF; the future
+  // designer-renamed slot is NATAL_DIAGRAM). When a per-reader wheel PNG
+  // generator lands, replace the below with:
+  //   const slot = getSlot(pageType, "NATAL_CHART");
+  //   const png = await ctx.out.embedPng(wheelPngBuf);
+  //   const rectY = slot.y - Math.max(slot.h - 12, 4);
+  //   page.drawImage(png, { x: slot.x, y: rectY, width: slot.w, height: slot.h });
+  // Until then, leave the widget rect untouched so the artwork's decorative
+  // wheel + "planets · houses · aspect lines" stand-in shows through.
+}
+
+/** "December 13, 1981" from "1981-12-13". Falls back to the raw value if it
+ *  doesn't parse. Used by `buildNatalChartPage` to render BIRTH_DATE in the
+ *  long-form engraved style the template's typography expects. */
+function formatLongDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const monthName = months[parseInt(mo!, 10) - 1] ?? mo;
+  return `${monthName} ${parseInt(d!, 10)}, ${y}`;
 }
 
 /** Embed a birthstone PNG from disk if available, else draw a vector gem.
@@ -1881,6 +1953,14 @@ async function processRecipe(ctx: BuildCtx, recipe: Recipe, book: ParsedBook): P
     reserveTOCPage(ctx);
     return;
   }
+  if (recipe.section === "natal-chart") {
+    // Standalone "Your Cosmic Blueprint" page — page 2, right after the TOC.
+    // Doesn't fan out across templates; the recipe's `templates: ["natal-chart"]`
+    // is just for symmetry with other sections, the page is always single.
+    ctx.chapterStarts.set("natal-chart", ctx.pageNumber + 1);
+    await buildNatalChartPage(ctx);
+    return;
+  }
   if (recipe.section === "welcome") {
     ctx.chapterStarts.set("welcome", ctx.pageNumber + 1);
     // Recipe specifies which template to use — supports both the new
@@ -2194,7 +2274,8 @@ export type SingleTemplateId =
   | "hardcover"
   | "zodiac-moon"
   | "zodiac-rising"
-  | "birthstone";
+  | "birthstone"
+  | "natal-chart";
 
 function mockOrder(overrides?: Partial<ZodiacOrder>): ZodiacOrder {
   const base = {
@@ -2456,6 +2537,9 @@ export async function renderSingleTemplate(id: SingleTemplateId): Promise<Buffer
       // The mock order's birthday (1990-05-15) lands in May → Emerald.
       // Swap the mockOrder({ birthday: "..." }) to preview other stones.
       await buildBirthstonePage(ctx, { ...ch, title: "Your Birthstone", subtitle: "A Talisman Aligned to Your Birth Month" } as ParsedChapter);
+      break;
+    case "natal-chart":
+      await buildNatalChartPage(ctx);
       break;
   }
 

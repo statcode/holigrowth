@@ -55,6 +55,7 @@ sees `slots.BODY_PARAGRAPH = [slot1, slot2, slot3]` in top-to-bottom order.
 | `zodiac-moon-editable.pdf` | Moon-Sign Feature | recto | `BOOK_TITLE`, `ZODIAC_NAME_MOON`, `ZODIAC_GLYPH_MOON`, `PAGE_NUMBER` | Chapter 3 — single dynamic template (one file for all 12 moon signs). Sign filled at render time from `order.moonSign`. `ZODIAC_GLYPH_MOON` is the small decorative flourish glyph between the bottom gold rules — drawn via `drawBigCenteredInRect` so the unicode zodiac symbol (or letter fallback) sits centred in the narrow band. |
 | `zodiac-rising-editable.pdf` | Rising-Sign Feature | recto | `BOOK_TITLE`, `ZODIAC_NAME_RISING`, `ZODIAC_GLYPH_RISING`, `PAGE_NUMBER` | Chapter 4 — same layout as moon. Sign filled from `order.risingSign`. |
 | `08-birthstone-editable.pdf` | Birthstone Feature (BONUS) | recto | `CHAPTER_TITLE`, `BIRTHSTONE_IMAGE`, `BIRTHSTONE_BODY`, `PAGE_NUMBER` | **Chapter 13 (BONUS)** — single dynamic template; the stone is resolved at render time from `order.birthday`'s month (Jan→Garnet, Feb→Amethyst, …Dec→Turquoise). `BIRTHSTONE_IMAGE` is filled with a PNG from `birthstones/<slug>.png` if present, otherwise the renderer draws a vector gemstone (filled circle in the stone's colour with a darker inner ring + a pearly highlight glint) so the page is never blank. `BIRTHSTONE_BODY` is laid out by `drawBirthstoneCaption` as the uppercase stone name (display weight) plus the gold italic tagline beneath. `CHAPTER_TITLE` is intentionally **not** filled — the template already bakes "YOUR BIRTHSTONE" into the top-left header band; filling the right-hand widget would produce a visible double-header. |
+| `10-natal-chart-editable.pdf` | Natal-Chart Feature (Your Cosmic Blueprint) | recto | `READER_NAME`, `NATAL_CHART`, `BIRTH_DATE`, `BIRTH_TIME`, `BIRTH_LOCATION`, `PAGE_NUMBER` | **Page 2** — placed immediately after the TOC. Text fields (name + birth date/time/place) are filled at render time by `buildNatalChartPage`. The `NATAL_CHART` image widget is **intentionally left untouched for now** — the artwork's decorative zodiac wheel + "planets · houses · aspect lines" stand-in remains visible. Per-reader chart-wheel generation is a follow-up; see [natal-chart-claude-code-prompt.md](natal-chart-claude-code-prompt.md) for the wheel-generation pipeline (Kerykeion AGPL Python option, or MIT-friendly JS option using `circular-natal-horoscope-js` + `@astrodraw/astrochart` + `resvg-js`). A designer-side validation script `fill_natal_chart.py` is preserved in this folder for quick previewing. |
 
 All page-type templates are **single page**, sized **450 × 666 pt** (6.25 × 9.25 in).
 
@@ -104,6 +105,7 @@ in order):
 
 | Section | Template sequence |
 |---|---|
+| Your Cosmic Blueprint (page 2) | `natal-chart` (1 page) — placed directly after the TOC, before the Welcome Letter |
 | Welcome Letter | `welcome-letter` (1 page) |
 | **Part I — Foundations** | `06-section-divider` (PART I) |
 | Chapter 1 — Your Life Path Overview | `01-chapter-opener` → `02-standard-body` (×N to fit) → `03-standard-body-with-quotes` (×1) |
@@ -405,10 +407,10 @@ pnpm --filter @workspace/api-server run smoke-template -- <id>
 Valid `<id>`s: `chapter-opener`, `standard-body`, `standard-body-with-quotes`,
 `data-numerology`, `affirmations`, `section-divider`, `body-continued`,
 `welcome-letter`, `closing-letter`, `zodiac-moon`, `zodiac-rising`,
-`birthstone`, plus `body-stress` (5+ pages of standard-body + body-continued
-with a long mock chapter — exercises the text-flow path) and `hardcover`
-(the case-wrap PDF at 14"×10.75" — see "Hardcover wrap" below). The
-moon/rising IDs render the mock-order's `moonSign` / `risingSign`
+`birthstone`, `natal-chart`, plus `body-stress` (5+ pages of standard-body
++ body-continued with a long mock chapter — exercises the text-flow path)
+and `hardcover` (the case-wrap PDF at 14"×10.75" — see "Hardcover wrap"
+below). The moon/rising IDs render the mock-order's `moonSign` / `risingSign`
 (Cancer / Libra) on the single dynamic template; `birthstone` renders the
 stone matching the mock-order's birthday (May 15 → Emerald) — change the
 mock-order's `birthday` in `render.ts` (or drop a different month into

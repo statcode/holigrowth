@@ -33,6 +33,7 @@ const VALID_IDS: SingleTemplateId[] = [
   "zodiac-moon",
   "zodiac-rising",
   "birthstone",
+  "natal-chart",
 ];
 
 const args = process.argv.slice(2).filter((a) => a !== "--");

@@ -57,6 +57,10 @@ If a chapter has affirmation sub-sections (Chapters 5, 6, 7) or mantra sub-secti
 
 ## Chapter Outline (12 Chapters)
 
+### Your Cosmic Blueprint (page 2 — no AI prose)
+
+Page 2 is the natal-chart "Your Cosmic Blueprint" page (template `10-natal-chart-editable.pdf`, builder `buildNatalChartPage` in [render.ts](../api-server/src/routes/zodiac-orders/templatedPdf/render.ts)). It contains **no AI-generated prose** — the renderer fills the customer's full name, birth date, birth time, and birth location into the engraved-style band, and (eventually) stamps a per-reader natal-chart wheel PNG into the `NATAL_CHART` image widget. See [natal-chart-claude-code-prompt.md](natal-chart-claude-code-prompt.md) for the wheel-generation pipeline. **The AI prompt is not responsible for any content on this page** — skip it entirely when writing the markdown body, just as you skip the TOC.
+
 ### Disclaimer & Welcome Letter
 
 A heartfelt, personalized welcome letter addressed by name, written on behalf of Holistic Growth. Include a clear disclaimer that this reading is for entertainment and self-reflection purposes only and is not a substitute for professional psychological, medical, financial, or legal advice.

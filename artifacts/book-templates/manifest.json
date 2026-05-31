@@ -888,6 +888,69 @@
           "fontName": "acro-field"
         }
       }
+    },
+    "natal-chart": {
+      "file": "10-natal-chart-editable.pdf",
+      "purpose": "Page 2 — Your Cosmic Blueprint. Shows the reader's natal-chart wheel image (when generated) along with their name, birth date/time/place. See natal-chart-claude-code-prompt.md for the wheel-generation pipeline; for now the wheel image slot is left untouched so the artwork's decorative wheel + 'planets · houses · aspect lines' stand-in is visible.",
+      "facing": "recto",
+      "placeholders": [
+        "READER_NAME",
+        "NATAL_CHART",
+        "BIRTH_DATE",
+        "BIRTH_TIME",
+        "BIRTH_LOCATION",
+        "PAGE_NUMBER"
+      ],
+      "slots": {
+        "READER_NAME": {
+          "x": 137,
+          "y": 583,
+          "w": 175,
+          "h": 27,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "NATAL_CHART": {
+          "x": 171,
+          "y": 307,
+          "w": 107,
+          "h": 14,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BIRTH_DATE": {
+          "x": 167,
+          "y": 109,
+          "w": 115,
+          "h": 21,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BIRTH_TIME": {
+          "x": 223,
+          "y": 74,
+          "w": 53,
+          "h": 9,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "BIRTH_LOCATION": {
+          "x": 203,
+          "y": 59,
+          "w": 58,
+          "h": 10,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        },
+        "PAGE_NUMBER": {
+          "x": 187,
+          "y": 38,
+          "w": 75,
+          "h": 11,
+          "fontSize": 11,
+          "fontName": "acro-field"
+        }
+      }
     }
   },
   "zodiacSigns": {
@@ -1011,6 +1074,14 @@
       "section": "toc",
       "title": "Contents",
       "$note": "Programmatically generated — no template file. Listed first so it lands on page 1."
+    },
+    {
+      "section": "natal-chart",
+      "title": "Your Cosmic Blueprint",
+      "$note": "Page 2 — natal-chart feature page. Filled at render time from order.birthday, .birthTime, .birthLocation. Wheel image is not yet dynamically generated; see natal-chart-claude-code-prompt.md for that work.",
+      "templates": [
+        "natal-chart"
+      ]
     },
     {
       "section": "welcome",
