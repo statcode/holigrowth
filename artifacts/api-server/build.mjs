@@ -30,6 +30,11 @@ async function buildAll() {
     external: [
       "*.node",
       "sharp",
+      // jsdom dynamically loads canvas/contextify natively when present;
+      // bundling it produces a "require is not defined" runtime error.
+      // Keep external so the installed copy (with its `node:` modules and
+      // optional native peers) is resolved at runtime.
+      "jsdom",
       "better-sqlite3",
       "sqlite3",
       "canvas",

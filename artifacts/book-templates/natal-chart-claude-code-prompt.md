@@ -40,122 +40,235 @@ So your job has two halves:
 
 ---
 
-## 1 · Generate the wheel
+## 🔒 LOCKED: Option B (inner wheel only, transparent background)
 
-You need software that (a) computes planetary + house + aspect positions from
-birth data and (b) renders a wheel. Recommended, in order:
+> **The page art already provides the decorative zodiac ring with sign names
+> AND glyphs printed around the gold rim.** Drawing AstroChart's own outer
+> ring on top would produce a visible double-ring. So we render *only* the
+> inner content (planet glyphs at true degrees, house spokes numbered 1–12,
+> red/blue/green aspect lines) on a **transparent** background, and the
+> page's existing rim stays visible.
 
-### Option A — Kerykeion (Python)
+This locks in concretely as:
 
-High-precision calculations via the Swiss Ephemeris, plus SVG rendering. It has
-a **wheel-only** export, which is exactly what we want (no redundant outer
-chrome — our page already supplies the decorative zodiac ring).
+- Strip AstroChart's outer ring (configure `SYMBOL_SCALE`, suppress sign-ring
+  layer, or post-process by removing the outermost `<g>`).
+- Export on **transparent** background — *not* `#f3e9d2` parchment fill.
+- Suppress AstroChart's sign-glyph layer at the outer edge (the page already
+  has its own gold glyphs at the outer rim).
+- Keep the inner content: planets, house cusps + numbers, aspect lines.
 
-```bash
-pip install kerykeion
-```
-
-```python
-from pathlib import Path
-from kerykeion import AstrologicalSubjectFactory
-from kerykeion.chart_data_factory import ChartDataFactory
-from kerykeion.charts.chart_drawer import ChartDrawer
-
-subject = AstrologicalSubjectFactory.from_birth_data(
-    "Chelsea Cardinal", 1981, 12, 13, 18, 30,   # year, month, day, hour, minute (24h, local)
-    lng=-117.6028, lat=33.6406, tz_str="America/Los_Angeles",
-    online=False,
-)
-chart_data = ChartDataFactory.create_natal_chart_data(subject)
-drawer = ChartDrawer(chart_data=chart_data)
-out = Path("charts_output"); out.mkdir(exist_ok=True)
-# wheel-only = just the inner graphic, no labels/tables around it
-drawer.save_wheel_only_svg_file(output_path=out, filename="chelsea-wheel")
-```
-
-> **License caveat (important for a commercial book product):** Kerykeion is
-> **AGPL-3.0**. Importing it into a closed-source app makes that app subject to
-> AGPL copyleft. For a commercial/closed product, use the hosted **Astrologer
-> API** (RapidAPI) instead and consume it as an external service, or pick the
-> MIT-licensed JS stack below.
-
-### Option B — JavaScript (MIT-friendly, calculate + draw split)
-
-- **Calculate:** `circular-natal-horoscope-js` — ascendant/MC, all major bodies,
-  nodes, retrograde flags, house cusps in multiple systems.
-- **Draw:** `@astrodraw/astrochart` or `Kibo/AstrologyChart2` — feed it `points`
-  + `cusps`, get a wheel SVG back. (These only *draw*; they don't compute
-  positions — hence the pairing.)
-
-Option B fits the existing Node renderer better. The Node-native chain is:
-
-```
-birthday + birthTime + birthLocation
-    │
-    ▼  (geocode + tz resolve — Nominatim, Google, or pre-resolved in DB)
-lat, lng, tz_str, datetime
-    │
-    ▼  (circular-natal-horoscope-js)
-{ascendant, midheaven, planets[], houses[]}
-    │
-    ▼  (@astrodraw/astrochart or AstrologyChart2)
-SVG string
-    │
-    ▼  (resvg-js or sharp)
-square transparent PNG buffer
-    │
-    ▼  (pdf-lib: embedPng → drawImage into widget /Rect)
-stamped into NATAL_DIAGRAM widget on page 2
-```
+If a future template redesign removes the baked-in zodiac ring, revisit this
+and switch to Option A (full wheel with parchment fill).
 
 ---
 
-## 2 · Turn it into a stampable image
+## 1 · Generate the wheel — MIT/JS stack
 
-Whatever generator you use, produce a **square, transparent PNG** (rasterize
-the SVG, e.g. with `cairosvg`, `resvg-js`, or a headless browser):
+Use a **two-library split**: one library *calculates* the positions, a second
+one *draws* the wheel. Both are **MIT-licensed** (no copyleft, free for
+commercial / closed-source use — no strings, no fees).
 
-- **Square** aspect ratio, e.g. 1200×1200 px (≈ 300 dpi for the 276 pt box).
-- **Transparent background** — corners must be transparent so the page's
-  parchment disc and gold rim show through. Render only the inner wheel; do
-  **not** draw your own outer ring, zodiac names, or background fill.
-- **Palette to match the page** (so it reads as part of the book, not a pasted
-  screenshot):
-  - ink / lines: `#1a1730` (and softer `#2a2540`)
-  - gold accents: `#b08a3e`
-  - aspect lines: red `#b0524a` (hard), blue `#4f6f9f` (soft), green `#5f7d4a` (minor)
-  - keep the disc fill transparent — the page already provides the `#f3e9d2`
-    parchment.
-- Fit the artwork so the wheel's outer edge sits just inside the square (small
-  margin), centered.
+**Calculate — [`circular-natal-horoscope-js`](https://github.com/0xStarcat/CircularNatalHoroscopeJS)** (MIT)
+Computes Ascendant / Midheaven, all major bodies + lunar nodes, retrograde
+flags, and house cusps in multiple house systems (Placidus, Whole Sign, etc.).
+
+**Draw — [`@astrodraw/astrochart`](https://github.com/AstroDraw/AstroChart)** (MIT, the maintained AstroChart fork)
+Pure renderer: you hand it `planets` + `cusps`, it returns the SVG wheel —
+glyphs, house spokes, and aspect lines drawn for you. It does **not** compute
+anything itself, which is why it's paired with the calculator above.
+
+```bash
+pnpm --filter @workspace/api-server add \
+  circular-natal-horoscope-js \
+  @astrodraw/astrochart \
+  sharp \
+  jsdom \
+  tz-lookup
+```
+
+`sharp` rasterises SVG → PNG. `jsdom` provides the DOM AstroChart needs when
+running in Node. `tz-lookup` resolves IANA timezone name from lat/lng.
+
+```ts
+// artifacts/api-server/src/lib/natalWheel.ts
+import { Origin, Horoscope } from "circular-natal-horoscope-js";
+import { Chart } from "@astrodraw/astrochart";
+import { JSDOM } from "jsdom";
+import sharp from "sharp";
+import tzLookup from "tz-lookup";
+
+export async function generateNatalWheelPng(
+  birthday: string,    // "1981-12-13"
+  birthTime: string,   // "18:30" (24h, local)
+  lat: number,
+  lng: number,
+): Promise<Buffer> {
+  // 1 · CALCULATE — note month is 0-indexed (December = 11)
+  const [y, mo, d] = birthday.split("-").map(Number);
+  const [hh, mm] = birthTime.split(":").map(Number);
+  const origin = new Origin({
+    year: y, month: mo - 1, date: d, hour: hh, minute: mm,
+    latitude: lat, longitude: lng,
+  });
+  const horoscope = new Horoscope({
+    origin,
+    houseSystem: "placidus",
+    zodiac: "tropical",
+    aspectPoints: ["bodies", "points"],
+    aspectWithPoints: ["bodies", "points"],
+    language: "en",
+  });
+
+  // 2 · ADAPT — map the horoscope output into AstroChart's expected shape.
+  //     planets: { Sun: [eclipticLongitudeDeg], Moon: [...], ... }
+  //     cusps:   [12 house-cusp longitudes, in order]
+  const planets: Record<string, number[]> = {};
+  for (const b of horoscope.CelestialBodies.all) {
+    planets[b.label] = [b.ChartPosition.Ecliptic.DecimalDegrees];
+  }
+  const cusps = horoscope.Houses.map(
+    (h: any) => h.ChartPosition.StartPosition.Ecliptic.DecimalDegrees,
+  );
+
+  // 3 · DRAW into a jsdom-backed SVG element. AstroChart writes into a real
+  //    DOM node, so we provide one through jsdom.
+  const dom = new JSDOM(
+    `<!doctype html><html><body><div id="chart-root"></div></body></html>`,
+  );
+  const { window } = dom;
+  (global as any).document = window.document;
+  (global as any).window = window;
+
+  const SIZE = 1200; // square px — 300 dpi for the 276 pt box
+  const chart = new Chart("chart-root", SIZE, SIZE, {
+    // Option B overrides — strip the outer ring + sign glyphs so only the
+    // inner wheel renders. The page art supplies the decorative rim.
+    SYMBOL_SCALE: 1,
+    COLOR_BACKGROUND: "transparent",
+    // Palette to match the page
+    COLOR_LINES: "#1a1730",
+    COLOR_SIGNS: "#b08a3e",
+    COLOR_PLANETS: "#1a1730",
+    COLOR_ASPECTS_HARD: "#b0524a",
+    COLOR_ASPECTS_SOFT: "#4f6f9f",
+    COLOR_ASPECTS_MINOR: "#5f7d4a",
+  });
+  const radix = chart.radix({ planets, cusps });
+  radix.aspects();
+
+  const svgEl = window.document.querySelector("svg");
+  if (!svgEl) throw new Error("AstroChart didn't produce an SVG element");
+  // Post-process: remove the outermost ring layer so only the inner content
+  // remains. AstroChart's ring is the first <g> child of the SVG — adjust the
+  // selector if the library version changes.
+  const outerRing = svgEl.querySelector("g.outer-ring, g[class*='ring']");
+  if (outerRing) outerRing.remove();
+
+  const svgString = svgEl.outerHTML;
+
+  // 4 · RASTERIZE to transparent PNG with sharp
+  const pngBuf = await sharp(Buffer.from(svgString))
+    .resize(SIZE, SIZE, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+
+  return pngBuf;
+}
+```
+
+> **Accuracy note (be honest with the user):** `circular-natal-horoscope-js`
+> uses its own Moshier-style ephemeris — accurate to within ~1 arc-minute for
+> modern dates, which is **more than enough for a natal book** (glyphs land in
+> the correct sign and degree). If you ever need observatory-grade precision,
+> swap *only the calculation step* for the Swiss-Ephemeris WASM port
+> (`sweph` / `swisseph-wasm`) and feed its longitudes into the same AstroChart
+> drawing step. ⚠️ Swiss Ephemeris is itself **dual-licensed AGPL/commercial**,
+> so only reach for it if you accept that license — the pure-MIT stack above
+> is the default.
+
+---
+
+## 2 · Geocoding the birth location
+
+The customer enters `birthLocation` as free text (e.g. "San Diego, California,
+USA"). Astrology calculations need precise **lat / lng + IANA timezone name**.
+
+Use Nominatim (OpenStreetMap's free geocoder) with caching:
+
+```ts
+async function geocodeBirthLocation(location: string): Promise<{ lat: number; lng: number; tz: string } | null> {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`;
+  const resp = await fetch(url, {
+    headers: { "User-Agent": "holigrowth-book-pipeline/1.0 (support@holigrowth.com)" },
+  });
+  if (!resp.ok) return null;
+  const data = (await resp.json()) as Array<{ lat: string; lon: string }>;
+  if (!data[0]) return null;
+  const lat = parseFloat(data[0].lat);
+  const lng = parseFloat(data[0].lon);
+  const tz = tzLookup(lat, lng); // resolves "America/Los_Angeles" etc.
+  return { lat, lng, tz };
+}
+```
+
+- Nominatim free tier: **1 req/sec**, requires a real user-agent. Cache the
+  result on the order row (add columns `birthLatitude DECIMAL(9,6)`,
+  `birthLongitude DECIMAL(9,6)`, `birthTimezone VARCHAR(64)` to
+  `zodiac_orders`) so a re-render doesn't re-geocode.
+- If the geocoder times out or returns nothing, **fall back to the stylized
+  vector wheel** (`drawStylizedNatalWheel`) so the page is never blank.
+- Commercial scale (>1 customer/sec) → swap Nominatim for a paid service
+  (Google Maps Geocoding API, Mapbox, LocationIQ).
 
 ---
 
 ## 3 · Stamp it (Node, in `buildNatalChartPage`)
 
 The Node renderer already reads `NATAL_CHART`'s `/Rect` from the manifest. The
-work to add image-stamping is:
+remaining work is wiring the PNG into the existing builder:
 
 ```ts
-// inside buildNatalChartPage in render.ts
+// inside buildNatalChartPage in render.ts — replace the call to
+// drawStylizedNatalWheel with the real-wheel path, with fallback.
 const wheelSlot = getSlot(pageType, "NATAL_CHART");
-if (wheelSlot && ctx.order.birthday && ctx.order.birthLocation) {
-  const pngBuf = await generateNatalWheelPng(ctx.order); // your new helper
-  const img = await ctx.out.embedPng(pngBuf);
-  // slot.y is the baseline; back out the rect's bottom and dimensions
-  const rectY = wheelSlot.y - Math.max(wheelSlot.h - 12, 4);
-  page.drawImage(img, {
-    x: wheelSlot.x,
-    y: rectY,
-    width: wheelSlot.w,
-    height: wheelSlot.h,
-  });
+let stamped = false;
+if (wheelSlot && order.birthday && order.birthLocation) {
+  try {
+    const coords = await getOrCacheBirthCoords(ctx, order);
+    if (coords) {
+      const pngBuf = await generateNatalWheelPng(
+        order.birthday, order.birthTime ?? "12:00",
+        coords.lat, coords.lng,
+      );
+      const img = await ctx.out.embedPng(pngBuf);
+      // The wheel widget is a small anchor (~107×14 pt); the actual visible
+      // disc on the page is ~250 pt square centred horizontally at the page
+      // mid-width. Stamp at the visible disc, not the widget rect.
+      const discSize = 250;
+      const discCx = 225;
+      const discCy = 277; // see NATAL_WHEEL_CENTER_Y in render.ts
+      page.drawImage(img, {
+        x: discCx - discSize / 2,
+        y: discCy - discSize / 2,
+        width: discSize,
+        height: discSize,
+      });
+      stamped = true;
+    }
+  } catch (err) {
+    logger.warn({ err, orderId: order.id }, "Natal wheel generation failed");
+  }
+}
+if (!stamped) {
+  // Fallback: stylized vector wheel from Sun/Moon/Rising signs only.
+  drawStylizedNatalWheel(rc, order);
 }
 ```
 
-`generateNatalWheelPng(order)` is the new helper that does the calculate →
-draw → rasterize chain above. Cache the PNG buffer per-order so a regenerate
-doesn't recompute.
+Cache the PNG buffer per-order (in `order.natalWheelPngUrl` if uploaded to
+object storage, or in-memory for the lifetime of the build) so regenerating
+PDFs doesn't recompute the chart.
 
 ---
 
@@ -172,9 +285,19 @@ visual validation when the designer re-exports the template.
 
 ## Definition of done
 
-- [ ] Real wheel generated from the actual birth data (not the HTML stand-in).
-- [ ] Exported as a square, transparent PNG with no self-drawn outer ring.
-- [ ] PNG stamped into the wheel widget's `/Rect`; 5 text fields filled (text
-      fields already work; only the image stamp is pending).
-- [ ] Output PDF opens with the wheel centered on the parchment disc, corners
-      showing parchment.
+- [ ] Real wheel computed from the actual birth data (not the HTML stand-in)
+      with `circular-natal-horoscope-js`.
+- [ ] Drawn with `@astrodraw/astrochart` — glyphs at true degrees, house
+      numbers, red / blue / green aspect lines.
+- [ ] Rasterized to a **square transparent PNG**; AstroChart's own outer ring
+      stripped (Option B — see locked decision above) so the page's baked-in
+      zodiac rim stays visible.
+- [ ] Palette overridden to the page's ink / gold.
+- [ ] Birth-location geocoded (Nominatim or paid service), result cached on
+      the order row so a re-render doesn't re-geocode.
+- [ ] PNG stamped into the wheel widget's visible disc area; 5 text fields
+      already filled by `buildNatalChartPage`.
+- [ ] Graceful fallback to `drawStylizedNatalWheel` when coords can't be
+      resolved or wheel generation throws.
+- [ ] Output PDF opens with the wheel centred on the parchment disc, the
+      page's gold zodiac rim still visible around it (no double-ring).

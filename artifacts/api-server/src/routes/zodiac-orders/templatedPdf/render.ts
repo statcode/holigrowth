@@ -924,8 +924,72 @@ async function buildNatalChartPage(ctx: BuildCtx): Promise<void> {
   fill("BIRTH_TIME", birthTime);
   fill("BIRTH_LOCATION", birthLocation);
 
-  // Stylized wheel — Sun + Moon + Rising markers + a thin aspect line.
-  drawStylizedNatalWheel(rc, ctx.order);
+  // Try the real per-reader chart wheel first: geocode the birth location,
+  // compute a real chart with circular-natal-horoscope-js, draw it with
+  // @astrodraw/astrochart, rasterise with sharp, stamp via pdf-lib. Falls
+  // back to the stylised vector wheel below if any step fails — Nominatim
+  // returns no result, the birth time is missing, sharp's binary doesn't
+  // match the host, etc. See `lib/natalWheel.ts` for the pipeline + the
+  // full design notes in `artifacts/book-templates/natal-chart-claude-code-prompt.md`.
+  const stamped = await drawRealNatalWheel(ctx, page, ctx.order);
+  if (!stamped) {
+    drawStylizedNatalWheel(rc, ctx.order);
+  }
+}
+
+/** Stamp a real per-reader chart-wheel PNG onto the page. Returns true on
+ *  success so the caller knows to skip the stylised fallback. Catches
+ *  everything internally — book generation must never fail because of a
+ *  geocoder or chart-library hiccup. */
+async function drawRealNatalWheel(
+  ctx: BuildCtx,
+  page: PDFPage,
+  order: ZodiacOrder,
+): Promise<boolean> {
+  const birthday = (order.birthday ?? "").trim();
+  const birthLocation = (order.birthLocation ?? "").trim();
+  if (!birthday || !birthLocation) return false;
+  try {
+    const { generateNatalWheelPng } = await import("../../../lib/natalWheel");
+    const png = await generateNatalWheelPng(
+      birthday,
+      (order.birthTime ?? "12:00").trim() || "12:00",
+      birthLocation,
+    );
+    if (!png) return false;
+
+    // Mask the baked-in "planets · houses · aspect lines" stand-in text
+    // first — same band the stylised wheel masks. Uses the disc parchment
+    // cream so the patch blends invisibly into the disc.
+    page.drawRectangle({
+      x: 90,
+      y: 255,
+      width: 270,
+      height: 45,
+      color: rgb(243 / 255, 233 / 255, 210 / 255),
+    });
+
+    const img = await ctx.out.embedPng(png);
+    // Stamp the PNG to fill the page's visible disc area. The page artwork
+    // has a decorative gold rim at ~radius 145pt from (NATAL_WHEEL_CENTER_X,
+    // NATAL_WHEEL_CENTER_Y); the AstroChart wheel (with its own outer ring
+    // stripped via Option B in lib/natalWheel.ts) sits inside that. Total
+    // discSize ≈ 290pt covers the page's existing rim and leaves
+    // AstroChart's inner planet ring + house spokes + aspect lines at a
+    // legible size for print.
+    const discSize = 290;
+    const cx = NATAL_WHEEL_CENTER_X;
+    const cy = NATAL_WHEEL_CENTER_Y;
+    page.drawImage(img, {
+      x: cx - discSize / 2,
+      y: cy - discSize / 2,
+      width: discSize,
+      height: discSize,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Math angle (in degrees, math convention with 0° pointing right and CCW
