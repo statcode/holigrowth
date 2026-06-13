@@ -1,5 +1,5 @@
 import { Link, useSearch } from "wouter";
-import { motion, type Variants } from "framer-motion";
+import { motion, MotionConfig, type Variants } from "framer-motion";
 import { Star, Sparkles, Heart, Coins, Leaf, CheckCircle, Gift, X, Truck, BookOpen, Flame, Package, Eye, ShieldCheck, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEO } from "@/components/SEO";
@@ -7,13 +7,17 @@ import { useGetReferral, getGetReferralQueryKey } from "@workspace/api-client-re
 import { useState } from "react";
 import heroWatercolor from "@assets/hero-watercolor.png";
 
+// Variants intentionally degenerate — `hidden` and `visible` are identical
+// so components using `initial="hidden" animate="visible"` render at their
+// final state immediately. Combined with `MotionConfig isStatic` below,
+// this kills both transform and opacity animation on the entire homepage.
 const fadeIn: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7 } },
+  hidden: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0 },
 };
 
 const stagger: Variants = {
-  visible: { transition: { staggerChildren: 0.15 } },
+  visible: {},
 };
 
 function StarRating({ count = 5 }: { count?: number }) {
@@ -36,7 +40,7 @@ function ReferralBanner({ code }: { code: string }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
+      initial={{ opacity: 1, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-primary text-primary-foreground px-4 py-3 relative"
     >
@@ -75,6 +79,18 @@ export default function Home() {
   ];
 
   return (
+    // Two-pronged "no animation" setup:
+    //   1. `reducedMotion="always"` tells framer-motion to skip every
+    //      transform animation (x / y / scale / rotate) — slides are gone.
+    //   2. Every `initial` prop on this page starts at `opacity: 1`, and
+    //      the `fadeIn` / `stagger` variants are degenerate (hidden ===
+    //      visible). With opacity already at its final value, there's
+    //      nothing to fade in — opacity transitions are no-ops.
+    // Combined, elements render at their final position and visibility
+    // instantly. Switch to `reducedMotion="user"` to respect each
+    // visitor's OS `prefers-reduced-motion` setting instead of forcing
+    // the static path on everyone.
+    <MotionConfig reducedMotion="always">
     <div className="min-h-screen bg-background text-foreground">
       <SEO
         title="Holistic Growth Life Path — Personalised Astrology & Birth Chart Book"
@@ -115,7 +131,7 @@ export default function Home() {
 
             {/* Left — book image */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 1, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
               className="space-y-4"
@@ -245,7 +261,7 @@ export default function Home() {
       <section id="inside" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center mb-14"
@@ -307,7 +323,7 @@ export default function Home() {
             ].map((page, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 1, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.55, delay: i * 0.08 }}
@@ -330,7 +346,7 @@ export default function Home() {
         </div>
         <div className="max-w-5xl mx-auto relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center mb-10"
@@ -345,7 +361,7 @@ export default function Home() {
             </p>
           </motion.div>
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 1, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.15 }}
@@ -366,7 +382,7 @@ export default function Home() {
             ))}
           </motion.div>
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={{ opacity: 1 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ delay: 0.25 }}
@@ -387,7 +403,7 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-secondary/8 rounded-full blur-[120px] pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center mb-14"
@@ -451,7 +467,7 @@ export default function Home() {
             ].map((pillar, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 1, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: i * 0.15 }}
@@ -482,7 +498,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
-              initial={{ opacity: 0, x: -30 }}
+              initial={{ opacity: 1, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.9 }}
@@ -542,7 +558,7 @@ export default function Home() {
       <section className="py-24 px-6 bg-muted border-y border-border">
         <div className="max-w-5xl mx-auto text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="mb-14"
@@ -561,7 +577,7 @@ export default function Home() {
             ].map((s, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 1, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
@@ -586,7 +602,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           {/* Aggregate */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-center mb-14"
@@ -643,7 +659,7 @@ export default function Home() {
             ].map((r, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, scale: 0.97 }}
+                initial={{ opacity: 1, scale: 0.97 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.07 }}
@@ -671,7 +687,7 @@ export default function Home() {
         </div>
         <div className="max-w-3xl mx-auto text-center relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 1, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="space-y-6"
@@ -712,5 +728,6 @@ export default function Home() {
         </div>
       </footer>
     </div>
+    </MotionConfig>
   );
 }
