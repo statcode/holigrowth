@@ -1,0 +1,23 @@
+#!/bin/bash
+# Cloudways-friendly pm2 wrapper.
+#
+# Why: Cloudways' app users have a read-only home, so the default ~/.pm2/
+# location is unwritable and every plain `pm2` command exits with
+#     EACCES: permission denied, mkdir '/home/.../.pm2/logs'
+#
+# This wrapper exports PM2_HOME to the same location deploy.sh uses
+# (~/public_html/.pm2-holigrowth) before invoking pm2, so interactive
+# commands like `pm2 list`, `pm2 logs`, `pm2 restart` work the same way
+# the automated deploy does.
+#
+# Usage on the server (from ~/public_html):
+#   ./pm2h list
+#   ./pm2h logs holigrowth-api
+#   ./pm2h logs holigrowth-api --lines 50 --err
+#   ./pm2h reload holigrowth-api
+#   ./pm2h status
+#   ./pm2h show holigrowth-api
+#
+# Anything you'd type after `pm2 …` works after `./pm2h …`.
+export PM2_HOME="$HOME/public_html/.pm2-holigrowth"
+exec pm2 "$@"
