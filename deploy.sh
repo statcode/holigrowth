@@ -37,7 +37,22 @@ pnpm build:front
 echo "→ pnpm build:back"
 pnpm build:back
 
-echo "→ pm2 reload holigrowth-api"
-pm2 reload holigrowth-api
+echo "→ pm2 startOrReload ecosystem.config.cjs --update-env"
+# startOrReload is the idempotent variant — it does a graceful reload when
+# the process is already registered, and a fresh start when it isn't (e.g.
+# after the pm2 daemon was killed by a server reboot or a perm reset and
+# the process list wasn't resurrected). Avoids the
+#     [PM2][ERROR] Process or Namespace holigrowth-api not found
+# failure that `pm2 reload holigrowth-api` produces in that state.
+#
+# --update-env tells pm2 to re-read the current environment, so any
+# changes to .env between deploys (new API key, model swap, port change)
+# actually land in the running process rather than getting silently
+# inherited from the previous pm2 start.
+pm2 startOrReload ecosystem.config.cjs --update-env
 
-echo "✓ deploy complete — tail logs with: pm2 logs holigrowth-api"
+# Save the process list so the next time the pm2 daemon resurrects (server
+# reboot, etc.) holigrowth-api comes back automatically.
+pm2 save
+
+echo "✓ deploy complete — tail logs with: ./pm2h logs holigrowth-api"
