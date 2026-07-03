@@ -11,7 +11,19 @@ import { logger } from "../../lib/logger";
 // Pod Package:   0600X0900FCSTDHC060CW444GXX
 // ─────────────────────────────────────────────────────────────────────────────
 
-const POD_PACKAGE_ID = "0600X0900FCSTDHC060CW444GXX";
+// Lulu POD package SKU. Encodes every print spec the order needs:
+//   0600X0900  6.00 × 9.00 inch trim
+//   FC         Full Color interior
+//   PRE        Premium print quality (better ink coverage than STD)
+//   CW         Case-wrap hardcover binding (NOT paper colour — that's later)
+//   060        60 lb interior paper weight
+//   UW         Uncoated White paper (cream "CW" isn't offered in 60 lb HC)
+//   444        Standard finish
+//   M          Matte laminate on the cover
+//   XX         No dust jacket
+// Verify against Lulu's sandbox before swapping — invalid SKUs 400 with
+// "Pod Package does not exist", and sandbox/prod catalogues can drift.
+const POD_PACKAGE_ID = "0600X0900FCPRECW060UW444MXX";
 const BOOK_MIN_PAGES = 40;
 const BOOK_MAX_PAGES = 60;
 
@@ -23,6 +35,7 @@ interface ShippingDetails {
   shippingState: string;
   shippingZip: string;
   shippingCountry: string;
+  shippingPhone: string;
   email: string;
 }
 
@@ -431,7 +444,7 @@ export async function submitBookToLulu({
         state_code: shippingDetails.shippingState,
         postcode: shippingDetails.shippingZip,
         country_code: shippingDetails.shippingCountry,
-        phone_number: "",
+        phone_number: shippingDetails.shippingPhone,
         email: shippingDetails.email,
       },
       shipping_option_level: "MAIL",

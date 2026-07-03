@@ -32,21 +32,67 @@ interface BirthCoords {
   tz: string;
 }
 
-/** Geocode a free-text birth location (e.g. "San Diego, California, USA")
- *  using Nominatim. Returns null on any failure — the caller falls back to
- *  the stylised wheel.
- *
- *  Nominatim's free tier is rate-limited to ~1 req/sec and requires a
- *  meaningful User-Agent header. We don't cache per-request here; production
- *  should cache the resolved coords on the order row (`birthLatitude`,
- *  `birthLongitude`, `birthTimezone` columns) so a re-render doesn't
- *  re-geocode. */
-async function geocodeBirthLocation(location: string): Promise<BirthCoords | null> {
-  if (!location || !location.trim()) return null;
+/** Resolve an IANA timezone for a (lat, lng). Centralised so both
+ *  Google and Nominatim paths share the same tz-lookup logic. */
+async function resolveTimezone(lat: number, lng: number): Promise<string> {
+  // tz-lookup is a CommonJS module exporting a single function. No
+  // @types/tz-lookup ships on npm so we manually shape the type.
+  const tzLookupMod = (await import("tz-lookup")) as unknown as { default?: (lat: number, lng: number) => string } | ((lat: number, lng: number) => string);
+  const tzLookup = typeof tzLookupMod === "function"
+    ? tzLookupMod
+    : (tzLookupMod.default ?? ((_lat: number, _lng: number) => "UTC"));
+  return tzLookup(lat, lng);
+}
+
+/** Google Geocoding API. Tolerates typos ("Bejin, China" → Beijing) and
+ *  returns higher-quality matches than Nominatim. Requires
+ *  GOOGLE_GEOCODING_API_KEY. Returns null on any failure so the caller
+ *  can fall back to Nominatim. */
+async function geocodeWithGoogle(location: string, apiKey: string): Promise<BirthCoords | null> {
+  try {
+    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+    url.searchParams.set("address", location);
+    url.searchParams.set("key", apiKey);
+    const resp = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) {
+      logger.warn({ status: resp.status, location }, "Google Geocoding returned non-2xx");
+      return null;
+    }
+    const data = (await resp.json()) as {
+      status: string;
+      error_message?: string;
+      results: Array<{ geometry: { location: { lat: number; lng: number } } }>;
+    };
+    if (data.status !== "OK") {
+      logger.warn({ status: data.status, error: data.error_message, location }, "Google Geocoding non-OK");
+      return null;
+    }
+    const hit = data.results[0];
+    if (!hit) {
+      logger.warn({ location }, "Google Geocoding returned no results");
+      return null;
+    }
+    const { lat, lng } = hit.geometry.location;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      logger.warn({ location, raw: hit }, "Google Geocoding returned non-numeric coords");
+      return null;
+    }
+    const tz = await resolveTimezone(lat, lng);
+    return { lat, lng, tz };
+  } catch (err) {
+    logger.warn({ err, location }, "Google Geocoding failed");
+    return null;
+  }
+}
+
+/** Nominatim (OpenStreetMap) fallback. Free, no key, but rate-limited to
+ *  ~1 req/sec and strict about exact spelling. Requires a meaningful
+ *  User-Agent header per their usage policy. */
+async function geocodeWithNominatim(location: string): Promise<BirthCoords | null> {
   try {
     const url = new URL("https://nominatim.openstreetmap.org/search");
     url.searchParams.set("format", "json");
-    url.searchParams.set("q", location.trim());
+    url.searchParams.set("q", location);
     url.searchParams.set("limit", "1");
     const resp = await fetch(url, {
       headers: {
@@ -70,18 +116,30 @@ async function geocodeBirthLocation(location: string): Promise<BirthCoords | nul
       logger.warn({ location, raw: data[0] }, "Nominatim returned non-numeric coords");
       return null;
     }
-    // tz-lookup is a CommonJS module exporting a single function. No
-    // @types/tz-lookup ships on npm so we manually shape the type.
-    const tzLookupMod = (await import("tz-lookup")) as unknown as { default?: (lat: number, lng: number) => string } | ((lat: number, lng: number) => string);
-    const tzLookup = typeof tzLookupMod === "function"
-      ? tzLookupMod
-      : (tzLookupMod.default ?? ((_lat: number, _lng: number) => "UTC"));
-    const tz = tzLookup(lat, lng);
+    const tz = await resolveTimezone(lat, lng);
     return { lat, lng, tz };
   } catch (err) {
-    logger.warn({ err, location }, "Geocoding failed");
+    logger.warn({ err, location }, "Nominatim geocoding failed");
     return null;
   }
+}
+
+/** Geocode a free-text birth location. Tries Google first (if
+ *  GOOGLE_GEOCODING_API_KEY is set), falls back to Nominatim. Returns
+ *  null only if both fail — the caller then falls back to the stylised
+ *  wheel. Caching the resolved coords on the order row (future
+ *  `birthLatitude` / `birthLongitude` / `birthTimezone` columns) would
+ *  avoid re-geocoding on re-render. */
+async function geocodeBirthLocation(location: string): Promise<BirthCoords | null> {
+  if (!location || !location.trim()) return null;
+  const trimmed = location.trim();
+  const googleKey = process.env.GOOGLE_GEOCODING_API_KEY;
+  if (googleKey) {
+    const fromGoogle = await geocodeWithGoogle(trimmed, googleKey);
+    if (fromGoogle) return fromGoogle;
+    logger.info({ location: trimmed }, "Google geocoding miss — falling back to Nominatim");
+  }
+  return geocodeWithNominatim(trimmed);
 }
 
 /** Compute a natal chart's planet positions + house cusps from birth data.

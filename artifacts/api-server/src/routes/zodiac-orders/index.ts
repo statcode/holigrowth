@@ -591,12 +591,39 @@ router.post("/zodiac-orders/:id/regenerate-pdf", async (req, res): Promise<void>
       uploadPdf(coverBuffer, "cover", params.data.id),
     ]);
 
+    // Regenerating PDFs invalidates any prior Lulu submission — the URLs
+    // baked into Lulu's print job now point at stale files. Move the order
+    // back to `generated` and clear the Lulu fields so the admin drawer
+    // shows the "Submit to Lulu" button again. Stripe fields (session/PI/
+    // priceUsd) intentionally persist — this is a re-submit, not a re-pay.
+    // If the previous status was already past `generated`, log it so the
+    // reset is auditable.
+    const resetLuluFields = order.status !== "generated" || order.luluOrderId != null;
     await db
       .update(zodiacOrdersTable)
-      .set({ interiorPdfUrl, coverPdfUrl })
+      .set({
+        interiorPdfUrl,
+        coverPdfUrl,
+        ...(resetLuluFields
+          ? { status: "generated" as const, luluOrderId: null, luluStatus: null }
+          : {}),
+      })
       .where(eq(zodiacOrdersTable.id, params.data.id));
 
-    logger.info({ orderId: params.data.id, pageCount }, "Admin: PDFs regenerated and uploaded");
+    if (resetLuluFields) {
+      logger.info(
+        {
+          orderId: params.data.id,
+          previousStatus: order.status,
+          previousLuluOrderId: order.luluOrderId,
+          previousLuluStatus: order.luluStatus,
+          pageCount,
+        },
+        "Admin: PDFs regenerated — status reset to generated, Lulu fields cleared",
+      );
+    } else {
+      logger.info({ orderId: params.data.id, pageCount }, "Admin: PDFs regenerated and uploaded");
+    }
 
     res.json({ interiorPdfUrl, coverPdfUrl, pageCount });
   } catch (error) {

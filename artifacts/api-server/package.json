@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@astrodraw/astrochart": "^3.0.2",
+    "@pdf-lib/fontkit": "^1.1.1",
     "@react-pdf/renderer": "^4.5.1",
     "@swc/helpers": "^0.5.21",
     "@types/pdfkit": "^0.17.6",

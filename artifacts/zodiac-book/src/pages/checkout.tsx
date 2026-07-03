@@ -26,6 +26,7 @@ const formSchema = z.object({
   shippingState: z.string().min(2, "State/Province is required"),
   shippingZip: z.string().min(3, "Zip/Postal Code is required"),
   shippingCountry: z.string().min(2, "Country is required"),
+  shippingPhone: z.string().min(7, "Phone number is required for delivery"),
   email: z.string().email("Valid email is required"),
 });
 
@@ -59,6 +60,7 @@ export default function Checkout() {
       shippingState: "",
       shippingZip: "",
       shippingCountry: "",
+      shippingPhone: "",
       email: order?.email || "",
     },
   });
@@ -204,6 +206,14 @@ export default function Checkout() {
                   </FormItem>
                 )} />
               </div>
+
+              <FormField control={form.control} name="shippingPhone" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-primary/80 text-xs uppercase tracking-widest">Phone Number</FormLabel>
+                  <FormControl><Input data-testid="input-phone" type="tel" placeholder="For delivery updates" {...field} className="bg-white" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <Button
                 data-testid="button-complete-order"

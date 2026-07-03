@@ -112,6 +112,7 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
     shippingState: "CA",
     shippingZip: "94103",
     shippingCountry: "US",
+    shippingPhone: "5555555555",
     email: order.email ?? "test@holigrowth.com",
   });
 
@@ -516,6 +517,7 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
                           <Input className="h-9 text-sm rounded-lg" placeholder="State / Province" value={lulu.shippingState} onChange={(e) => setLulu({ ...lulu, shippingState: e.target.value })} />
                           <Input className="h-9 text-sm rounded-lg" placeholder="ZIP / Postal" value={lulu.shippingZip} onChange={(e) => setLulu({ ...lulu, shippingZip: e.target.value })} />
                           <Input className="h-9 text-sm rounded-lg" placeholder="Country (ISO-2, e.g. US)" value={lulu.shippingCountry} onChange={(e) => setLulu({ ...lulu, shippingCountry: e.target.value })} />
+                          <Input className="h-9 text-sm rounded-lg col-span-2" placeholder="Phone number (required by Lulu)" value={lulu.shippingPhone} onChange={(e) => setLulu({ ...lulu, shippingPhone: e.target.value })} />
                           <Input className="h-9 text-sm rounded-lg col-span-2" placeholder="Confirmation email" value={lulu.email} onChange={(e) => setLulu({ ...lulu, email: e.target.value })} />
                         </div>
                         <div className="flex gap-2">

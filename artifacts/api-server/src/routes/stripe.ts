@@ -28,7 +28,17 @@ router.post("/stripe/create-checkout-session", async (req, res): Promise<void> =
 
   const stripe = await getUncachableStripeClient();
 
-  const baseUrl = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "") ?? `${req.protocol}://${req.get("host")}`;
+  // Stripe redirects the customer's BROWSER to success_url / cancel_url, so
+  // we need a URL the browser can reach — not the api-server origin.
+  //   - Prod: FRONTEND_URL is unset → falls back to PUBLIC_BASE_URL, which
+  //     points at the Apache vhost that serves both the SPA and proxies /api/*.
+  //   - Local dev: api-server runs on :8088 (or behind a tunnel to :8088) and
+  //     Vite serves the SPA on :5173. Set FRONTEND_URL=http://localhost:5173
+  //     in .env so /success/:id resolves to the Vite-served SPA shell.
+  const frontendUrl =
+    process.env.FRONTEND_URL?.replace(/\/$/, "") ??
+    process.env.PUBLIC_BASE_URL?.replace(/\/$/, "") ??
+    `${req.protocol}://${req.get("host")}`;
 
   const settings = await getOrCreateSettings();
   const bookPriceCents = Math.round(settings.priceUsd * 100);
@@ -53,8 +63,8 @@ router.post("/stripe/create-checkout-session", async (req, res): Promise<void> =
     payment_method_types: ["card"],
     line_items: lineItems,
     mode: "payment",
-    success_url: `${baseUrl}/success/${orderId}`,
-    cancel_url: `${baseUrl}/order/${orderId}?payment=cancel`,
+    success_url: `${frontendUrl}/success/${orderId}`,
+    cancel_url: `${frontendUrl}/order/${orderId}?payment=cancel`,
     customer_email: order.email ?? undefined,
     metadata: { orderId: String(orderId) },
   };

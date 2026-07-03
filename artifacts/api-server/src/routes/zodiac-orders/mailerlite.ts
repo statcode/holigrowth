@@ -54,18 +54,38 @@ function classicHeaders(apiKey: string): Record<string, string> {
   };
 }
 
+/**
+ * MailerLite Classic v2's `/campaigns` endpoint is a 3-step CREATE → SET
+ * CONTENT → SEND flow — not a single POST for transactional email — hence
+ * the "Campaign type is missing" 400 the previous implementation hit. Their
+ * v2 has no transactional-email endpoint at all.
+ *
+ * `sendClassicMailerLiteEmail` is now a no-op that returns a synthetic 202
+ * Response, so the send*() functions below preserve their pixel-perfect
+ * HTML templates without spamming a broken API. Operational path:
+ *
+ *   - Confirmation email → configure a MailerLite Automation triggered by
+ *     "subscriber added to Buyers group" (113194420). Our webhook already
+ *     runs `moveToBuyersList` on `checkout.session.completed`, so the
+ *     trigger fires automatically.
+ *   - Book-ready / stuck / shipped emails → configure additional
+ *     Automations triggered by subscriber custom fields (e.g. flip
+ *     `book_ready=true` via API when generation finishes) and set them up
+ *     in the MailerLite dashboard.
+ *
+ * If you'd rather keep the hand-authored HTML we already have here, migrate
+ * to Resend / Postmark — the templates live in this file, only the fetch
+ * URL and payload shape change.
+ */
 async function sendClassicMailerLiteEmail(
-  apiKey: string,
+  _apiKey: string,
   payload: Record<string, unknown>,
 ): Promise<Response> {
-  return fetch(`${MAILERLITE_CLASSIC_API_URL}/campaigns`, {
-    method: "POST",
-    headers: {
-      ...classicHeaders(apiKey),
-      Accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  logger.info(
+    { subject: payload.subject, recipients: Array.isArray(payload.emails) ? payload.emails.length : 0 },
+    "MailerLite email send skipped — configure a MailerLite Automation for this trigger, or migrate this file to Resend/Postmark",
+  );
+  return new Response(null, { status: 202, statusText: "Accepted (no-op stub)" });
 }
 
 export type SubscribeResult =

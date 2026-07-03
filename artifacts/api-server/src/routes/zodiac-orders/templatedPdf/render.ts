@@ -15,9 +15,10 @@
  * second `02-standard-body` page and so on until the chapter is exhausted.
  */
 
-import { promises as fs } from "node:fs";
+import { promises as fs, existsSync } from "node:fs";
 import path from "node:path";
-import { PDFDocument, rgb, degrees, StandardFonts, type PDFFont, type PDFPage, type PDFEmbeddedPage } from "pdf-lib";
+import { PDFDocument, rgb, degrees, type PDFFont, type PDFPage, type PDFEmbeddedPage } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import type { ZodiacOrder } from "@workspace/db";
 import {
   loadManifest,
@@ -152,6 +153,15 @@ async function tryLoadFont(doc: PDFDocument, file: string): Promise<PDFFont | nu
 }
 
 async function loadFonts(doc: PDFDocument): Promise<FontSet> {
+  // pdf-lib requires an external fontkit instance to embed anything other
+  // than the Standard 14 PDF fonts. Without this call, `embedFont(ttfBytes)`
+  // throws — tryLoadFont() then silently catches and returns null, which
+  // silently drops us into the unembedded Times-Roman fallback below. That
+  // fallback produces print-unsafe PDFs (Lulu rejects them with "Fonts we
+  // found in your file need to be embedded"), so this registration is
+  // load-bearing for print correctness.
+  doc.registerFontkit(fontkit);
+
   const dir = path.join(templatesDir(), "fonts");
   // Drop OFL-licensed Cormorant TTFs here for typography parity with the templates.
   const candidates = [
@@ -174,11 +184,21 @@ async function loadFonts(doc: PDFDocument): Promise<FontSet> {
 
   const cormorantPresent = Boolean(loaded.regular && loaded.bold && loaded.italic);
   if (!cormorantPresent) {
-    const regular = await doc.embedFont(StandardFonts.TimesRoman);
-    const bold = await doc.embedFont(StandardFonts.TimesRomanBold);
-    const italic = await doc.embedFont(StandardFonts.TimesRomanItalic);
-    const boldItalic = await doc.embedFont(StandardFonts.TimesRomanBoldItalic);
-    return { regular, bold, italic, boldItalic, display: bold, $isCormorant: false };
+    // The previous fallback here silently used pdf-lib's Standard 14 fonts,
+    // which are NEVER embedded and get rejected by every commercial print
+    // farm ("Fonts we found in your file need to be embedded"). That silent
+    // failure masked the real bug for hours in July 2026. If the Cormorant
+    // TTFs are missing, fail loudly so ops sees it immediately — a broken
+    // deploy is preferable to shipping print-unsafe PDFs to customers.
+    const missing = (["regular", "bold", "italic"] as const)
+      .filter((k) => !loaded[k])
+      .join(", ");
+    throw new Error(
+      `Cormorant Garamond fonts missing from ${dir} (${missing} not loaded). ` +
+      `Run artifacts/book-templates/preprocess-print-templates.sh isn't relevant here — ` +
+      `you need the TTFs themselves. Download from google-webfonts-helper or fonts.gstatic.com ` +
+      `and place at ${dir}/CormorantGaramond-{Regular,Bold,Italic,BoldItalic}.ttf.`
+    );
   }
 
   return {
@@ -663,6 +683,55 @@ interface BuildCtx {
   tocPage: PDFPage | null;
 }
 
+/**
+ * Neutralise unembedded font references in a source PDF before `embedPdf`
+ * copies it into the output. The Claude.ai-exported templates carry
+ * `/Font <</F1 <unembedded Helvetica>>>` in each page's Resources dict and a
+ * matching `/AcroForm /DR` at the catalog root. pdf-lib faithfully copies
+ * both into the output — which then trips Lulu's "fonts must be embedded"
+ * check even though our own rendering overlays everything with the loaded
+ * Cormorant TTFs.
+ *
+ * We can't just delete the Font entry: the template's content stream has
+ * `/F1 12 Tf …` ops (empty text blocks left behind by the exporter, but
+ * still real ops), and dropping /F1 makes Lulu's normaliser fail with
+ * "Missing font". Instead we **swap every font value** in each page's
+ * `/Font` dict to point at a freshly-embedded Cormorant Regular in the same
+ * source doc — so the content stream's font refs still resolve, but the
+ * font they resolve to is embedded. The visible output is unchanged
+ * because the template's text ops never actually paint any glyphs (no
+ * `Tj`/`TJ` between BT/ET).
+ */
+/**
+ * Some Claude.ai-exported templates carry unembedded Helvetica / Times refs
+ * in vestigial content-stream ops and widget appearance streams. Runtime
+ * pdf-lib surgery on those is fragile — pdf-lib's deferred font
+ * materialisation, nested XObject Form resources, and Widget /DR entries
+ * each need to be handled, and getting any of them wrong leaves Lulu
+ * rejecting on either "unembedded fonts" or "missing font".
+ *
+ * The reliable fix is to preprocess each template ONCE with Ghostscript's
+ * pdfwrite device (which force-embeds all fonts and normalises the object
+ * graph), producing `<name>-print.pdf` alongside `<name>-editable.pdf`.
+ * `parse.ts` continues to read the ORIGINAL editable file so it can extract
+ * AcroForm widget slot positions; `embedTemplate` prefers the -print variant
+ * when it exists.
+ *
+ * The preprocess step is `scripts/preprocess-templates.sh`; the produced
+ * -print.pdf files live next to the editable originals in book-templates/.
+ */
+function resolveEmbedTemplatePath(filename: string): string {
+  const editablePath = templatePath(filename);
+  // Try the -print.pdf variant first. Naming: `02-standard-body-editable.pdf`
+  // → `02-standard-body-print.pdf`.
+  const printFilename = filename.replace(/-editable(\.pdf)$/, "-print$1");
+  if (printFilename !== filename) {
+    const printPath = templatePath(printFilename);
+    if (existsSync(printPath)) return printPath;
+  }
+  return editablePath;
+}
+
 async function embedTemplate(
   ctx: BuildCtx,
   filename: string,
@@ -671,7 +740,7 @@ async function embedTemplate(
   const cacheKey = `${filename}#${pageIndex}`;
   const cached = ctx.embedCache.get(cacheKey);
   if (cached) return cached;
-  const buf = await fs.readFile(templatePath(filename));
+  const buf = await fs.readFile(resolveEmbedTemplatePath(filename));
   const src = await PDFDocument.load(buf);
   const [embedded] = await ctx.out.embedPdf(src, [pageIndex]);
   ctx.embedCache.set(cacheKey, embedded!);
@@ -2325,7 +2394,7 @@ export async function buildHardcoverWrap(order: ZodiacOrder): Promise<Buffer> {
   const fonts = await loadFonts(out);
 
   // Embed the template wrap page (1008 × 774 pt).
-  const tplPath = path.join(templatesDir(), "00-hardcover-editable.pdf");
+  const tplPath = resolveEmbedTemplatePath("00-hardcover-editable.pdf");
   const tplBytes = await fs.readFile(tplPath);
   const tplDoc = await PDFDocument.load(tplBytes);
   const [embedded] = await out.embedPdf(tplDoc, [0]);

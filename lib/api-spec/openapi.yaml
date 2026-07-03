@@ -386,6 +386,9 @@ components:
           type: string
         shippingCountry:
           type: string
+        shippingPhone:
+          type: string
+          description: Required by Lulu's sandbox print-job endpoint; production accepts empty but sandbox 400s without it. Also used by carriers for delivery contact.
         email:
           type: string
       required:
@@ -395,6 +398,7 @@ components:
         - shippingState
         - shippingZip
         - shippingCountry
+        - shippingPhone
         - email
 
     OrderStats:

@@ -14,5 +14,7 @@ export interface SubmitToLuluBody {
   shippingState: string;
   shippingZip: string;
   shippingCountry: string;
+  /** Required by Lulu's sandbox print-job endpoint; production accepts empty but sandbox 400s without it. Also used by carriers for delivery contact. */
+  shippingPhone: string;
   email: string;
 }

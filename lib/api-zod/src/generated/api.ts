@@ -222,6 +222,11 @@ export const SubmitToLuluBody = zod.object({
   shippingState: zod.string(),
   shippingZip: zod.string(),
   shippingCountry: zod.string(),
+  shippingPhone: zod
+    .string()
+    .describe(
+      "Required by Lulu's sandbox print-job endpoint; production accepts empty but sandbox 400s without it. Also used by carriers for delivery contact.",
+    ),
   email: zod.string(),
 });
 
