@@ -102,7 +102,7 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
   // collapse to keep the drawer clean for the common admin tasks.
   const [showLuluForm, setShowLuluForm] = useState(false);
   const [isSubmittingLulu, setIsSubmittingLulu] = useState(false);
-  const [luluResult, setLuluResult] = useState<{ luluOrderId?: string | null; luluStatus?: string | null; priceUsd?: number | null } | null>(null);
+  const [luluResult, setLuluResult] = useState<{ luluOrderId?: string | null; luluStatus?: string | null; luluCostUsd?: number | null } | null>(null);
   const [luluError, setLuluError] = useState<string | null>(null);
   const [lulu, setLulu] = useState({
     shippingName: order.fullName || "Test Recipient",
@@ -143,9 +143,9 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(lulu),
       });
-      const data = await res.json() as { luluOrderId?: string | null; luluStatus?: string | null; priceUsd?: number | null; error?: string };
+      const data = await res.json() as { luluOrderId?: string | null; luluStatus?: string | null; luluCostUsd?: number | null; error?: string };
       if (!res.ok) throw new Error(data.error ?? "Lulu submission failed");
-      setLuluResult({ luluOrderId: data.luluOrderId, luluStatus: data.luluStatus, priceUsd: data.priceUsd });
+      setLuluResult({ luluOrderId: data.luluOrderId, luluStatus: data.luluStatus, luluCostUsd: data.luluCostUsd });
       onRefreshed();
     } catch (err) {
       setLuluError(err instanceof Error ? err.message : "Unknown error");
@@ -561,7 +561,14 @@ function OrderDrawer({ order, onClose, onRefreshed }: { order: ZodiacOrder; onCl
                           <p>Lulu Order ID: <code className="font-mono">{luluResult.luluOrderId}</code></p>
                         )}
                         {luluResult.luluStatus && <p>Status: {luluResult.luluStatus}</p>}
-                        {typeof luluResult.priceUsd === "number" && <p>Price quote: ${luluResult.priceUsd.toFixed(2)}</p>}
+                        {typeof luluResult.luluCostUsd === "number" && (
+                          <p>
+                            Lulu print cost: ${luluResult.luluCostUsd.toFixed(2)}
+                            {order.priceUsd
+                              ? ` · Retail: $${order.priceUsd.toFixed(2)} · Margin: $${(order.priceUsd - luluResult.luluCostUsd).toFixed(2)}`
+                              : ""}
+                          </p>
+                        )}
                         <p className="text-teal-700/80 mt-1">Check the Lulu dashboard ({"sandbox or prod, depending on LULU_SANDBOX"}) to confirm the job appears.</p>
                       </div>
                     )}

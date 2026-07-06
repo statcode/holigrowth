@@ -73,7 +73,14 @@ export const ListZodiacOrdersResponseItem = zod.object({
   luluOrderId: zod.string().nullish(),
   luluStatus: zod.string().nullish(),
   shippingAddress: zod.string().nullish(),
-  priceUsd: zod.number().nullish(),
+  priceUsd: zod
+    .number()
+    .nullish()
+    .describe("Customer retail price — what Stripe charged (USD)."),
+  luluCostUsd: zod
+    .number()
+    .nullish()
+    .describe("Lulu's print + ship cost, used for margin analysis (USD)."),
   stripeSessionId: zod.string().nullish(),
   stripePaymentIntentId: zod.string().nullish(),
   interiorPdfUrl: zod.string().nullish(),
@@ -184,7 +191,14 @@ export const GetZodiacOrderResponse = zod.object({
   luluOrderId: zod.string().nullish(),
   luluStatus: zod.string().nullish(),
   shippingAddress: zod.string().nullish(),
-  priceUsd: zod.number().nullish(),
+  priceUsd: zod
+    .number()
+    .nullish()
+    .describe("Customer retail price — what Stripe charged (USD)."),
+  luluCostUsd: zod
+    .number()
+    .nullish()
+    .describe("Lulu's print + ship cost, used for margin analysis (USD)."),
   stripeSessionId: zod.string().nullish(),
   stripePaymentIntentId: zod.string().nullish(),
   interiorPdfUrl: zod.string().nullish(),
@@ -285,7 +299,14 @@ export const SubmitToLuluResponse = zod.object({
   luluOrderId: zod.string().nullish(),
   luluStatus: zod.string().nullish(),
   shippingAddress: zod.string().nullish(),
-  priceUsd: zod.number().nullish(),
+  priceUsd: zod
+    .number()
+    .nullish()
+    .describe("Customer retail price — what Stripe charged (USD)."),
+  luluCostUsd: zod
+    .number()
+    .nullish()
+    .describe("Lulu's print + ship cost, used for margin analysis (USD)."),
   stripeSessionId: zod.string().nullish(),
   stripePaymentIntentId: zod.string().nullish(),
   interiorPdfUrl: zod.string().nullish(),
@@ -398,7 +419,16 @@ export const GetOrderStatsResponse = zod.object({
         luluOrderId: zod.string().nullish(),
         luluStatus: zod.string().nullish(),
         shippingAddress: zod.string().nullish(),
-        priceUsd: zod.number().nullish(),
+        priceUsd: zod
+          .number()
+          .nullish()
+          .describe("Customer retail price — what Stripe charged (USD)."),
+        luluCostUsd: zod
+          .number()
+          .nullish()
+          .describe(
+            "Lulu's print + ship cost, used for margin analysis (USD).",
+          ),
         stripeSessionId: zod.string().nullish(),
         stripePaymentIntentId: zod.string().nullish(),
         interiorPdfUrl: zod.string().nullish(),

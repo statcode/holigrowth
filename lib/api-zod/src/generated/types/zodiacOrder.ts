@@ -51,8 +51,16 @@ export interface ZodiacOrder {
   luluStatus?: string | null;
   /** @nullable */
   shippingAddress?: string | null;
-  /** @nullable */
+  /**
+   * Customer retail price — what Stripe charged (USD).
+   * @nullable
+   */
   priceUsd?: number | null;
+  /**
+   * Lulu's print + ship cost, used for margin analysis (USD).
+   * @nullable
+   */
+  luluCostUsd?: number | null;
   /** @nullable */
   stripeSessionId?: string | null;
   /** @nullable */

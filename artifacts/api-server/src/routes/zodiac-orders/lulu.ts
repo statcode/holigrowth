@@ -42,7 +42,10 @@ interface ShippingDetails {
 interface LuluResult {
   orderId: string;
   status: string;
-  priceUsd: number;
+  /** Lulu's quoted print + ship cost (`costs.total_cost_excl_tax`) — NOT the
+   *  customer retail price. Persisted to `orders.luluCostUsd` for margin
+   *  analysis; never overwrite `orders.priceUsd` with this value. */
+  luluCostUsd: number;
 }
 
 // Sandbox vs prod selection. Set LULU_SANDBOX=true in .env to route every
@@ -401,7 +404,7 @@ export async function submitBookToLulu({
     return {
       orderId: `DEMO-${Date.now()}`,
       status: "DEMO_ORDER",
-      priceUsd: 49.99,
+      luluCostUsd: 49.99,
     };
   }
 
@@ -463,13 +466,13 @@ export async function submitBookToLulu({
     costs?: { total_cost_excl_tax?: string };
   };
 
-  const priceRaw = printJob.costs?.total_cost_excl_tax;
-  const priceUsd = priceRaw ? parseFloat(priceRaw) : 49.99;
+  const costRaw = printJob.costs?.total_cost_excl_tax;
+  const luluCostUsd = costRaw ? parseFloat(costRaw) : 49.99;
 
   return {
     orderId: String(printJob.id),
     status: printJob.status?.name ?? "CREATED",
-    priceUsd,
+    luluCostUsd,
   };
 }
 

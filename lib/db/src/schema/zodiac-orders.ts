@@ -29,7 +29,14 @@ export const zodiacOrdersTable = mysqlTable(
     referralCode: text("referral_code"),
     referredBy: text("referred_by"),
     referralCount: int("referral_count").notNull().default(0),
+    // Customer retail price — what Stripe charged them (in USD, cents-precision).
+    // Set by the Stripe checkout-session route and the checkout.session.completed
+    // webhook. NEVER overwrite this with Lulu's print cost.
     priceUsd: float("price_usd"),
+    // Lulu's print + ship cost (per print_job.costs.total_cost_excl_tax).
+    // Populated when the print job is created. Used only for margin analysis —
+    // customer-facing pages should reference priceUsd instead.
+    luluCostUsd: float("lulu_cost_usd"),
     stripeSessionId: text("stripe_session_id"),
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     interiorPdfUrl: text("interior_pdf_url"),

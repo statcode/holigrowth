@@ -612,7 +612,9 @@ router.post("/zodiac-orders/:id/submit-to-lulu", async (req, res): Promise<void>
         luluStatus: luluResult.status,
         shippingAddress: shippingAddressStr,
         email: body.data.email || order.email,
-        priceUsd: luluResult.priceUsd,
+        // Lulu's quote is the PRINT COST, not the retail price the customer
+        // paid — keep priceUsd intact and stash the print cost separately.
+        luluCostUsd: luluResult.luluCostUsd,
       })
       .where(eq(zodiacOrdersTable.id, params.data.id));
 

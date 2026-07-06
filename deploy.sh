@@ -31,6 +31,32 @@ git pull origin main
 echo "→ pnpm install --frozen-lockfile (skip cleanly if no dep changes)"
 pnpm install --frozen-lockfile
 
+# ─── Apply DB schema changes (drizzle-kit push) ────────────────────────────
+# Reads DATABASE_URL from the app's .env file. `set -a` marks any variables
+# defined between it and `set +a` for export, so drizzle-kit (which reads
+# process.env.DATABASE_URL in drizzle.config.ts) can see them.
+#
+# `push` is dev-friendly sync, not a migration — it diffs the schema against
+# the DB and applies changes directly. This is convenient but DESTRUCTIVE
+# for column removes / type narrowing. For the current pattern (add nullable
+# columns) it's safe. If you ever introduce a breaking schema change,
+# consider switching to `drizzle-kit generate` + `drizzle-kit migrate`.
+#
+# Set SKIP_DB_PUSH=1 in the environment to skip (e.g. for hotfixes that
+# don't touch schema).
+if [ "${SKIP_DB_PUSH:-0}" != "1" ]; then
+    echo "→ pnpm --filter @workspace/db run push"
+    if [ -f .env ]; then
+        set -a
+        # shellcheck source=/dev/null
+        . ./.env
+        set +a
+    else
+        echo "  ⚠ .env not found — drizzle-kit will fail if DATABASE_URL is unset"
+    fi
+    pnpm --filter @workspace/db run push
+fi
+
 echo "→ pnpm build:front"
 pnpm build:front
 

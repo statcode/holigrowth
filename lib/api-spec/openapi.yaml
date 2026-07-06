@@ -304,6 +304,10 @@ components:
           type: ["string", "null"]
         priceUsd:
           type: ["number", "null"]
+          description: "Customer retail price — what Stripe charged (USD)."
+        luluCostUsd:
+          type: ["number", "null"]
+          description: "Lulu's print + ship cost, used for margin analysis (USD)."
         stripeSessionId:
           type: ["string", "null"]
         stripePaymentIntentId:
