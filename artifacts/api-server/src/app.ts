@@ -83,4 +83,23 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use("/api", router);
 
+/**
+ * Global Express error handler. Without this, unhandled route errors
+ * fall through to Express's default handler which prints a bare stack
+ * trace to stderr — MySQL diagnostics (code / errno / sqlMessage /
+ * sql) live on the Error's own fields or on `.cause`, and Express
+ * drops them all. Routing through our pino logger with the custom
+ * `err` serialiser surfaces the actual driver-level message.
+ *
+ * Four-arg signature is required for Express to recognise this as an
+ * error handler (three-arg would be treated as a normal middleware).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, req: import("express").Request, res: import("express").Response, _next: import("express").NextFunction) => {
+  req.log.error({ err }, "Unhandled route error");
+  if (res.headersSent) return;
+  const message = err instanceof Error ? err.message : String(err);
+  res.status(500).json({ error: message });
+});
+
 export default app;
