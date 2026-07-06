@@ -18,6 +18,11 @@
 export PM2_HOME="$HOME/public_html/.pm2-holigrowth"
 mkdir -p "$PM2_HOME"
 
+# Fontconfig cache directory for sharp/libvips text rendering. Cloudways'
+# read-only home means all of Fontconfig's default cache locations fail —
+# see ecosystem.config.cjs's FC_CACHEDIR block for the full rationale.
+mkdir -p "$HOME/public_html/.cache/fontconfig"
+
 set -e
 
 # Always run from the script's own directory — lets the user invoke this

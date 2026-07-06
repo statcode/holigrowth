@@ -130,6 +130,21 @@ module.exports = {
       time: true,
       env: {
         NODE_ENV: "production",
+        // ─── Fontconfig cache (Cloudways read-only-home workaround) ────────
+        // Fontconfig's default cache lookup is: $FC_CACHEDIR → $XDG_CACHE_HOME
+        // /fontconfig → ~/.cache/fontconfig → ~/.fontconfig → /var/cache/
+        // fontconfig. On Cloudways the first four fall through (~/ and its
+        // subdirs are read-only for the app user), landing on /var/cache/
+        // fontconfig which is root-owned. Every sharp call that rasterises
+        // an SVG then floods stderr with:
+        //   Fontconfig error: No writable cache directories
+        // and text glyphs quietly fall back to a default face — bad for the
+        // natal-wheel pipeline where planet labels + degree markers matter.
+        //
+        // Point $FC_CACHEDIR at ~/public_html/.cache/fontconfig (created in
+        // deploy.sh). Resolved at pm2 startup so this works on any host
+        // where $HOME is set — no per-server hardcoding.
+        FC_CACHEDIR: `${process.env.HOME || ""}/public_html/.cache/fontconfig`,
       },
     },
   ],
