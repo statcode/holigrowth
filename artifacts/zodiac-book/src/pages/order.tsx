@@ -182,6 +182,14 @@ export default function Order() {
 
   const { adminToken, testMode, isAdmin } = useAdmin();
 
+  // Admin-only gate for the raw generated content on this page. Even paid
+  // customers can't see the "Personalized Reading" markdown here — they
+  // read the book on /preview (full PDF pages, layout-faithful) or wait
+  // for the printed hardcover. This page is fundamentally an ops/status
+  // surface, not a content-consumption surface, so the raw text belongs
+  // to admins only.
+  const canReadBook = isAdmin;
+
   const startGeneration = useCallback(async () => {
     try {
       const response = await fetch(`/api/zodiac-orders/${id}/generate`, {
@@ -471,59 +479,23 @@ export default function Order() {
             ))}
           </div>
 
+          {/* Full generated reading — admin-only. Even paid customers see
+              nothing of the raw markdown here; they read the book via the
+              layout-faithful PDF pages on /preview or the printed hardcover
+              once it arrives. Deliberately no teaser blur: a determined
+              visitor with DevTools could unblur it. */}
+          {canReadBook && (
           <div className="relative rounded-3xl bg-white border border-border shadow-sm overflow-hidden mb-10">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/40 to-transparent" />
             <div className="p-8">
               <h3 className="font-serif text-xl mb-5 text-primary italic">
-                {isAdmin ? "Your Personalized Reading — Full" : "Your Personalized Reading"}
+                Your Personalized Reading{isAdmin ? " — Full" : ""}
               </h3>
 
               {order.generatedContent ? (
-                <>
-                  {/* Always-visible first section */}
-                  <div className="font-serif text-base leading-relaxed text-foreground/80 whitespace-pre-line">
-                    {isAdmin ? order.generatedContent : order.generatedContent.slice(0, 900)}
-                  </div>
-
-                  {/* Locked section for non-admins */}
-                  {!isAdmin && order.generatedContent.length > 900 && (
-                    <div className="relative mt-1">
-                      {/* Blurred locked content */}
-                      <div
-                        className="font-serif text-base leading-relaxed text-foreground/80 whitespace-pre-line select-none pointer-events-none"
-                        style={{ filter: "blur(5px)" }}
-                      >
-                        {order.generatedContent.slice(900, 3500)}
-                      </div>
-
-                      {/* Gradient fade from clear → blurred */}
-                      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-white to-transparent" />
-
-                      {/* Full overlay fade at bottom */}
-                      <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-white via-white/80 to-transparent" />
-
-                      {/* Lock card */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-border shadow-lg p-6 text-center max-w-xs mx-4">
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                            <Lock className="w-5 h-5 text-primary" />
-                          </div>
-                          <h4 className="font-serif text-lg text-foreground mb-1">The rest is yours — inside the book</h4>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            All 13 chapters, your three pillars, lucky numbers, birthstone talisman, and closing letter are waiting in print.
-                          </p>
-                          <Button
-                            size="sm"
-                            onClick={() => setLocation(`/order/${id}/checkout`)}
-                            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-5"
-                          >
-                            Order to unlock <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
+                <div className="font-serif text-base leading-relaxed text-foreground/80 whitespace-pre-line">
+                  {order.generatedContent}
+                </div>
               ) : (
                 <p className="font-serif text-base text-foreground/60 italic">
                   Your personalized reading is securely woven into the pages.
@@ -550,6 +522,7 @@ export default function Order() {
               </div>
             )}
           </div>
+          )}
 
           <div className="text-center bg-muted border border-border p-10 rounded-3xl mb-8">
             <h3 className="text-3xl font-serif mb-3 text-foreground">Print Your Life Path Book</h3>
