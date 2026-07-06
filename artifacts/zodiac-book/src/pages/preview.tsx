@@ -5,6 +5,7 @@ import { SEO } from "@/components/SEO";
 import { ChevronLeft, ChevronRight, ArrowRight, Loader2, Lock, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/contexts/admin-context";
+import { PdfPageCanvas, usePdfDoc, toRelativePdfUrl } from "@/components/PdfBookViewer";
 import {
   useCreateCheckoutSession,
   useGetZodiacOrder,
@@ -1223,8 +1224,36 @@ export default function Preview() {
     order?.status === "generated" || order?.status === "shipped" ||
     order?.status === "submitting" || order?.status === "processing";
 
+  // Whether the customer has actually paid — used to unlock the full book.
+  // `isGenerated` means AI content exists; it flips to true the moment
+  // generation finishes, BEFORE the customer has paid. Previously we gated
+  // page unlocking on `isGenerated`, which meant every visitor with a
+  // freshly-generated order could read all 43+ pages for free.
+  //
+  // Payment signals we trust:
+  //   - stripePaymentIntentId (set by the checkout.session.completed webhook)
+  //   - status = "processing" | "shipped" | "submitting" (post-Lulu-submit
+  //     states, which require prior payment)
+  const isPaid =
+    Boolean(order?.stripePaymentIntentId) ||
+    order?.status === "processing" ||
+    order?.status === "shipped" ||
+    order?.status === "submitting";
+
   const displayName =
     order?.fullName ?? (nameParam ? decodeURIComponent(nameParam) : "Your Name");
+
+  // If the interior PDF is ready, render the real book pages via pdf.js.
+  // Otherwise fall back to the hand-rolled mockup cards for the still-
+  // generating state. Route the fetch through the same origin so Vite's
+  // dev proxy (or Apache in prod) handles it — avoids CORS on the
+  // cloudflared-tunnel PDF URL that Lulu needs.
+  const pdfPath = useMemo(
+    () => (order?.interiorPdfUrl ? toRelativePdfUrl(order.interiorPdfUrl) : null),
+    [order?.interiorPdfUrl],
+  );
+  const { doc: pdfDoc, numPages: pdfNumPages, loading: pdfLoading } = usePdfDoc(pdfPath);
+  const usePdf = Boolean(pdfDoc && pdfNumPages > 0);
 
   const { pages, fullPageCount } = useMemo<{ pages: PageData[]; fullPageCount: number }>(() => {
     const full = order?.generatedContent
@@ -1233,16 +1262,21 @@ export default function Preview() {
           return built.length >= 6 ? built : SAMPLE_PAGES;
         })()
       : SAMPLE_PAGES;
-    // Non-admins see only the first 5 pages — pages 6+ are not in the DOM at
-    // all (true gating, not an overlay). Admins see the whole book.
+    // Non-admins see only the first 5 mock pages — pages 6+ are not in the
+    // DOM at all (true gating, not an overlay). Admins see the whole book.
+    // For the PDF path, gating happens at the current page index instead.
     return {
       pages: isAdmin ? full : full.slice(0, 5),
       fullPageCount: full.length,
     };
   }, [order?.generatedContent, isAdmin]);
 
-  const TOTAL = pages.length;
-  const UNLOCK_THRESHOLD = isGenerated ? TOTAL : 5;
+  const TOTAL = usePdf ? pdfNumPages : pages.length;
+  // Unlock rules:
+  //   - Admins always see the whole book
+  //   - Once payment has flipped the order past `generated`, the customer sees it all
+  //   - Otherwise: first 5 pages as a teaser, rest are locked
+  const UNLOCK_THRESHOLD = isAdmin || isPaid ? TOTAL : Math.min(5, TOTAL);
 
   const go = (dir: 1 | -1) => {
     const next = current + dir;
@@ -1327,16 +1361,33 @@ export default function Preview() {
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          <div className="flex-1 relative" style={{ aspectRatio: "1 / 1" }}>
+          {/* 6/9 matches the printed book's 6"×9" trim size — square (1/1)
+              was visually squashing PDF pages into an oval. */}
+          <div className="flex-1 relative" style={{ aspectRatio: "6 / 9" }}>
             {/* Drop shadow */}
             <div className="absolute inset-0 rounded-2xl shadow-[0_28px_70px_rgba(0,0,0,0.22)] pointer-events-none z-30" />
             {/* Binding shadow */}
             <div className="absolute inset-y-0 left-0 w-3 bg-gradient-to-r from-black/22 to-transparent rounded-l-2xl z-20 pointer-events-none" />
+            {/* "Preview" badge — sits on the top-right corner so users understand
+                this is a digital preview, not the printed hardcover they'll receive. */}
+            <div className="absolute top-3 right-3 z-40 pointer-events-none">
+              <div className="bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] font-semibold tracking-[0.2em] uppercase px-2.5 py-1 rounded-full shadow-md">
+                Preview
+              </div>
+            </div>
             <div className="w-full h-full rounded-2xl overflow-hidden relative bg-[#faf8f3]">
               <AnimatePresence custom={direction} mode="wait">
                 <motion.div key={current} custom={direction} variants={slideVariants}
                   initial="enter" animate="center" exit="exit" className="absolute inset-0">
-                  {page && renderPage(page, order as OrderLike | undefined)}
+                  {usePdf ? (
+                    <PdfPageCanvas doc={pdfDoc} pageNumber={current + 1} />
+                  ) : pdfLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    page && renderPage(page, order as OrderLike | undefined)
+                  )}
                   {isLocked && <LockedOverlay />}
                 </motion.div>
               </AnimatePresence>
@@ -1354,13 +1405,18 @@ export default function Preview() {
           Page {current + 1} of {TOTAL}
         </p>
 
-        <button
-          onClick={handleOrder}
-          className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm mb-4"
-        >
-          Order My Book
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </button>
+        {/* Post-purchase nav — paid customers see a Track My Order button
+            here. Unpaid customers use the fancy CTA card below instead
+            (this small button next to it would just be a duplicate). */}
+        {isPaid && (
+          <button
+            onClick={() => setLocation(order?.email ? `/track?email=${encodeURIComponent(order.email)}` : "/track")}
+            className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm mb-4"
+          >
+            Track My Order
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </button>
+        )}
 
         {isAdmin && generatedPdfUrl && (
           <a
@@ -1376,8 +1432,10 @@ export default function Preview() {
 
         {/* Dot navigation */}
         <div className="flex gap-1 flex-wrap justify-center max-w-[360px]">
-          {pages.map((p, i) => {
-            const color = pageColor(p);
+          {Array.from({ length: TOTAL }).map((_, i) => {
+            // PDF mode: dots use a neutral gold; mockup mode: use the per-
+            // page-type accent colour from pageColor()
+            const color = usePdf ? "#c9a84c" : pageColor(pages[i]!);
             const active = i === current;
             const locked = i >= UNLOCK_THRESHOLD;
             return (
@@ -1393,8 +1451,11 @@ export default function Preview() {
           })}
         </div>
 
-        {/* CTA — only shown if not generated/paid */}
-        {!isGenerated && (
+        {/* Purchase CTA card — hidden once the customer has paid so they
+            don't see a "buy" prompt after ordering. Not gating on
+            `isGenerated` (which just means "AI content exists") — that was
+            the bug that let unpaid customers browse the whole book. */}
+        {!isPaid && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
             className="mt-8 w-full max-w-sm">
             <div className="bg-muted border border-border rounded-2xl p-6 space-y-4 text-center">

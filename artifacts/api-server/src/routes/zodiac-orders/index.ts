@@ -67,6 +67,47 @@ function gateUnpaidFields<T extends { stripePaymentIntentId?: string | null; luc
 
 const router: IRouter = Router();
 
+/**
+ * In-memory progress tracker for in-flight AI generations. Keyed by orderId.
+ * Written by the /:id/generate handler on each SSE event; read by the
+ * /:id/generation-progress endpoint so a client that reloaded (or was 409'd
+ * because generation was already in flight) can render the same progress
+ * bar without an SSE connection.
+ *
+ * Cleared on completion, failure, and periodically for stale entries — the
+ * in-memory nature is intentional: if the server restarts mid-generation,
+ * the async work is killed anyway, so losing the progress row is coherent.
+ */
+type GenerationProgress = {
+  stage: "writing" | "pdf" | "upload";
+  sectionsCompleted: number;
+  sectionsTotal: number;
+  lastSectionTitle: string | null;
+  lastUpdated: number;
+};
+const generationProgress = new Map<number, GenerationProgress>();
+function setGenerationProgress(orderId: number, patch: Partial<GenerationProgress>): void {
+  const prev = generationProgress.get(orderId) ?? {
+    stage: "writing" as const,
+    sectionsCompleted: 0,
+    sectionsTotal: 0,
+    lastSectionTitle: null,
+    lastUpdated: Date.now(),
+  };
+  generationProgress.set(orderId, { ...prev, ...patch, lastUpdated: Date.now() });
+}
+function clearGenerationProgress(orderId: number): void {
+  generationProgress.delete(orderId);
+}
+// Sweep progress rows that haven't been updated in 15 min. Guards against a
+// stuck row confusing a client on the second attempt after a server crash.
+setInterval(() => {
+  const cutoff = Date.now() - 15 * 60 * 1000;
+  for (const [id, entry] of generationProgress) {
+    if (entry.lastUpdated < cutoff) generationProgress.delete(id);
+  }
+}, 60_000).unref();
+
 router.get("/zodiac-orders", async (_req, res): Promise<void> => {
   const orders = await db
     .select()
@@ -227,6 +268,28 @@ router.get("/zodiac-orders/:id", async (req, res): Promise<void> => {
   res.json(GetZodiacOrderResponse.parse(serializeDates(gateUnpaidFields(order))));
 });
 
+/**
+ * GET /zodiac-orders/:id/generation-progress
+ *
+ * Live progress for an in-flight AI generation. Used by clients that
+ * connected AFTER generation started (a reload during the loader, another
+ * tab, etc.) — for them the POST /generate returns 409 and they poll this
+ * endpoint every second or so instead of holding an SSE connection open.
+ *
+ * Returns `null` when no generation is in flight (either it never started
+ * or already completed — the client should treat both as "check the order
+ * status row" and stop polling).
+ */
+router.get("/zodiac-orders/:id/generation-progress", async (req, res): Promise<void> => {
+  const params = GenerateZodiacContentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const progress = generationProgress.get(params.data.id) ?? null;
+  res.json({ progress });
+});
+
 router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
   const params = GenerateZodiacContentParams.safeParse(req.params);
   if (!params.success) {
@@ -294,6 +357,11 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
     // Tell the client how many sections to expect so the loader can show
     // a progress bar / "n of N" count.
     res.write(`data: ${JSON.stringify({ stage: "writing", totalSections: sections.length })}\n\n`);
+    setGenerationProgress(params.data.id, {
+      stage: "writing",
+      sectionsTotal: sections.length,
+      sectionsCompleted: 0,
+    });
 
     /** Run a single section's AI call to completion and emit a progress
      *  event when it finishes. One automatic retry on failure (timeout,
@@ -336,6 +404,12 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
               title: section.title,
             },
           })}\n\n`);
+          setGenerationProgress(params.data.id, {
+            stage: "writing",
+            sectionsCompleted: completedRef.n,
+            sectionsTotal: sections.length,
+            lastSectionTitle: section.title,
+          });
           return { idx, key: section.key, text: text.trim() };
         } catch (err) {
           lastErr = err;
@@ -390,6 +464,7 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
       .where(eq(zodiacOrdersTable.id, params.data.id));
 
     res.write(`data: ${JSON.stringify({ stage: "pdf", message: "Generating PDF files…" })}\n\n`);
+    setGenerationProgress(params.data.id, { stage: "pdf" });
 
     // Check for admin test mode (5-page PDF)
     const reqBody = req.body as { adminToken?: string; adminTestMode?: boolean } | undefined;
@@ -403,6 +478,7 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
     ]);
 
     res.write(`data: ${JSON.stringify({ stage: "upload", message: "Uploading PDFs…" })}\n\n`);
+    setGenerationProgress(params.data.id, { stage: "upload" });
 
     // Upload both PDFs to object storage in parallel
     const [interiorPdfUrl, coverPdfUrl] = await Promise.all([
@@ -436,6 +512,7 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
 
     res.write(`data: ${JSON.stringify({ done: true, metadata, interiorPdfUrl, coverPdfUrl, pageCount })}\n\n`);
     res.end();
+    clearGenerationProgress(params.data.id);
   } catch (error) {
     // Surface the underlying error message in the response so DevTools shows
     // the actual cause (e.g. "Section 'chapter-5' failed after 2 attempts:
@@ -448,6 +525,8 @@ router.post("/zodiac-orders/:id/generate", async (req, res): Promise<void> => {
       .update(zodiacOrdersTable)
       .set({ status: "failed" })
       .where(eq(zodiacOrdersTable.id, params.data.id));
+
+    clearGenerationProgress(params.data.id);
 
     // Fire stuck-generation email so the customer knows to retry (fire-and-forget)
     const [failedOrder] = await db

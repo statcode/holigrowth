@@ -51,6 +51,50 @@ export default function Order() {
   const [sectionsCompleted, setSectionsCompleted] = useState<{ key: string; title: string }[]>([]);
   const streamStarted = useRef(false);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Poll handle for the resume-after-409 progress endpoint. Started when the
+  // /generate POST returns 409 (another tab or the previous session is
+  // already streaming this order); stopped when the order status transitions
+  // to `generated` or `failed`.
+  const progressPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopProgressPoll = () => {
+    if (progressPollRef.current) {
+      clearInterval(progressPollRef.current);
+      progressPollRef.current = null;
+    }
+  };
+  const pollProgress = () => {
+    stopProgressPoll();
+    progressPollRef.current = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/zodiac-orders/${id}/generation-progress`);
+        if (!resp.ok) return;
+        const data = (await resp.json()) as {
+          progress: {
+            stage: "writing" | "pdf" | "upload";
+            sectionsCompleted: number;
+            sectionsTotal: number;
+            lastSectionTitle: string | null;
+          } | null;
+        };
+        const p = data.progress;
+        if (p) {
+          setGenerationStage(p.stage);
+          setSectionsTotal(p.sectionsTotal);
+          setSectionsCompleted(
+            Array.from({ length: p.sectionsCompleted }, (_, i) => ({
+              key: `section-${i + 1}`,
+              title: i === p.sectionsCompleted - 1 && p.lastSectionTitle
+                ? p.lastSectionTitle
+                : "Chapter completed",
+            })),
+          );
+        }
+      } catch {
+        // network hiccup — retry next tick
+      }
+    }, 2000);
+  };
+  useEffect(() => stopProgressPoll, []);
 
   // Session-based offer countdown — 30 min, persists across refreshes within same tab session
   const [countdownSecs, setCountdownSecs] = useState(30 * 60);
@@ -108,12 +152,14 @@ export default function Order() {
     } else if (order?.status === "generated") {
       setIsGenerating(false);
       setIsReconnecting(false);
+      stopProgressPoll();
       if (isPreview) {
         const name = encodeURIComponent(order.fullName);
         setLocation(`/preview/${id}?name=${name}`);
       }
     } else if (order?.status === "failed") {
       setIsGenerating(false);
+      stopProgressPoll();
       setIsReconnecting(false);
     }
   }, [order?.status]);
@@ -152,11 +198,13 @@ export default function Order() {
 
       // 409 = another generation is already running for this order (the user
       // closed and reopened the tab while the AI was still streaming, or two
-      // /preview tabs are open). The in-flight job will finish and flip
-      // status to `generated` on its own — drop the live stream and let the
-      // 3-second order-polling drive the UI to completion.
+      // /preview tabs are open). Poll the progress endpoint so the loader
+      // still shows section-count / stage updates as the OTHER stream
+      // advances. The 3-second order-polling detects completion separately
+      // and clears the poll via the status-watching effect below.
       if (response.status === 409) {
         setIsReconnecting(true);
+        pollProgress();
         return;
       }
 

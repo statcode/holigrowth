@@ -143,6 +143,59 @@ export default function Success() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.status]);
 
+  // Polling handle for the resume-after-409 path. Cleared when generation
+  // finishes (order.status → generated/failed) so we don't keep hitting the
+  // API for a job that's done.
+  const progressPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopProgressPoll = () => {
+    if (progressPollRef.current) {
+      clearInterval(progressPollRef.current);
+      progressPollRef.current = null;
+    }
+  };
+  const pollProgress = () => {
+    stopProgressPoll();
+    progressPollRef.current = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/zodiac-orders/${id}/generation-progress`);
+        if (!resp.ok) return;
+        const data = (await resp.json()) as {
+          progress: {
+            stage: "writing" | "pdf" | "upload";
+            sectionsCompleted: number;
+            sectionsTotal: number;
+            lastSectionTitle: string | null;
+          } | null;
+        };
+        const p = data.progress;
+        if (p) {
+          setGenerationStage(p.stage);
+          setSectionsTotal(p.sectionsTotal);
+          // The other client owns per-section titles; we only know the count
+          // and the most recent title. Fabricate placeholder rows so the
+          // progress bar reads "n of N" correctly.
+          setSectionsCompleted(
+            Array.from({ length: p.sectionsCompleted }, (_, i) => ({
+              key: `section-${i + 1}`,
+              title: i === p.sectionsCompleted - 1 && p.lastSectionTitle
+                ? p.lastSectionTitle
+                : "Chapter completed",
+            })),
+          );
+        }
+      } catch {
+        // network hiccup — try again on next tick
+      }
+    }, 2000);
+  };
+  useEffect(() => stopProgressPoll, []);
+  useEffect(() => {
+    // Stop polling as soon as the order transitions to a terminal state.
+    if (order?.status === "generated" || order?.status === "failed") {
+      stopProgressPoll();
+    }
+  }, [order?.status]);
+
   const startGeneration = async () => {
     setIsGenerating(true);
     setGenerationStage("writing");
@@ -155,9 +208,12 @@ export default function Success() {
       });
 
       // 409 = another generation already in progress for this order. Keep
-      // the loader on screen and let the polling effect detect when status
-      // flips to `generated`. See order.tsx for the equivalent branch.
+      // the loader on screen and start polling the progress endpoint so
+      // the section-count / stage still update as sections finish on the
+      // other client's stream. Poll stops when the order row flips to
+      // `generated` or `failed` — see the useEffect that watches order.status.
       if (response.status === 409) {
+        pollProgress();
         return;
       }
 
@@ -379,8 +435,8 @@ export default function Success() {
 
         <p className="text-white/20 text-xs text-center">
           Questions? Email us at{" "}
-          <a href="mailto:hello@holigrowth.com" className="text-[#c9a84c]/50 hover:text-[#c9a84c] transition-colors underline underline-offset-2">
-            hello@holigrowth.com
+          <a href="mailto:support@holigrowth.com" className="text-[#c9a84c]/50 hover:text-[#c9a84c] transition-colors underline underline-offset-2">
+            support@holigrowth.com
           </a>
         </p>
       </div>

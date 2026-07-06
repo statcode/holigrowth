@@ -147,3 +147,59 @@ export async function readLocalUploadWithMeta(
 
   return { buffer, contentType };
 }
+
+/**
+ * Return a read stream for the first N pages of an interior PDF, sliced on
+ * demand and cached to disk at `<uuid>.preview.pdf`. Used by the storage
+ * route to gate the full book behind payment — a determined unpaid customer
+ * can inspect the PDF bytes in DevTools and see everything past the client-
+ * side lock overlay, so we ALSO enforce the gate here at the source.
+ *
+ * The cache key is the source UUID alone. If the source PDF is regenerated
+ * (new UUID), the preview file for the old UUID is orphaned but harmless.
+ * Regenerating with the same UUID (would require deleting + reusing) would
+ * serve a stale preview — we don't do that anywhere, but noting it.
+ */
+export async function readInteriorPreviewStream(
+  id: string,
+  pageCount = 5,
+): Promise<{ stream: Readable; size: number; contentType: string }> {
+  if (!ID_PATTERN.test(id)) throw new LocalUploadNotFoundError();
+  const fullPath = path.join(UPLOADS_DIR, id);
+  const previewPath = `${fullPath}.preview.pdf`;
+
+  // If the cached preview already exists and is at least as new as the
+  // source, serve it. Otherwise (re)build.
+  let previewStat;
+  try {
+    previewStat = await fs.stat(previewPath);
+    const srcStat = await fs.stat(fullPath);
+    if (previewStat.mtimeMs < srcStat.mtimeMs) previewStat = null;
+  } catch {
+    previewStat = null;
+  }
+
+  if (!previewStat) {
+    let srcBuffer: Buffer;
+    try {
+      srcBuffer = await fs.readFile(fullPath);
+    } catch {
+      throw new LocalUploadNotFoundError();
+    }
+    const { PDFDocument } = await import("pdf-lib");
+    const src = await PDFDocument.load(srcBuffer);
+    const dst = await PDFDocument.create();
+    const take = Math.min(pageCount, src.getPageCount());
+    const copied = await dst.copyPages(src, Array.from({ length: take }, (_, i) => i));
+    for (const page of copied) dst.addPage(page);
+    const bytes = await dst.save();
+    await fs.writeFile(previewPath, bytes);
+    previewStat = await fs.stat(previewPath);
+  }
+
+  return {
+    stream: createReadStream(previewPath),
+    size: previewStat.size,
+    contentType: "application/pdf",
+  };
+}

@@ -505,7 +505,7 @@ export default function Track() {
               </p>
               <p className="text-white/20 text-xs mt-4">
                 Need help?{" "}
-                <a href="mailto:hello@holigrowth.com" className="text-[#c9a84c]/50 hover:text-[#c9a84c] transition-colors underline underline-offset-2">
+                <a href="mailto:support@holigrowth.com" className="text-[#c9a84c]/50 hover:text-[#c9a84c] transition-colors underline underline-offset-2">
                   Contact support
                 </a>
               </p>
@@ -549,8 +549,8 @@ export default function Track() {
         <div className="mt-16 text-center">
           <p className="text-white/20 text-xs">
             Questions about your order?{" "}
-            <a href="mailto:hello@holigrowth.com" className="text-[#c9a84c]/40 hover:text-[#c9a84c] transition-colors underline underline-offset-2">
-              hello@holigrowth.com
+            <a href="mailto:support@holigrowth.com" className="text-[#c9a84c]/40 hover:text-[#c9a84c] transition-colors underline underline-offset-2">
+              support@holigrowth.com
             </a>
           </p>
         </div>

@@ -364,6 +364,10 @@ importers:
         version: 3.25.76
 
   artifacts/zodiac-book:
+    dependencies:
+      pdfjs-dist:
+        specifier: ^5.7.284
+        version: 5.7.284
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0

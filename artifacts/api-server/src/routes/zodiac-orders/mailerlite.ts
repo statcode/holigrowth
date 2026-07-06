@@ -353,7 +353,7 @@ export async function sendOrderConfirmationEmail(order: ZodiacOrder): Promise<vo
     <!-- Footer -->
     <div style="text-align:center;border-top:1px solid #1e3a52;padding-top:20px;">
       <p style="color:#4b5563;font-size:12px;margin:0 0 4px;">Questions? We're here to help.</p>
-      <a href="mailto:hello@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">hello@holigrowth.com</a>
+      <a href="mailto:support@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">support@holigrowth.com</a>
       <p style="color:#374151;font-size:11px;margin:16px 0 0;">© ${new Date().getFullYear()} Holistic Growth LLC · All rights reserved</p>
     </div>
 
@@ -511,7 +511,7 @@ export async function sendBookReadyEmail(order: ZodiacOrder): Promise<void> {
     <!-- Footer -->
     <div style="text-align:center;border-top:1px solid #1e3a52;padding-top:20px;">
       <p style="color:#4b5563;font-size:12px;margin:0 0 4px;">Questions? We're here to help.</p>
-      <a href="mailto:hello@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">hello@holigrowth.com</a>
+      <a href="mailto:support@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">support@holigrowth.com</a>
       <p style="color:#374151;font-size:11px;margin:16px 0 0;">© ${new Date().getFullYear()} Holistic Growth LLC · All rights reserved</p>
     </div>
 
@@ -595,7 +595,7 @@ export async function sendGenerationStuckEmail(order: ZodiacOrder): Promise<void
     <!-- Footer -->
     <div style="text-align:center;border-top:1px solid #1e3a52;padding-top:20px;">
       <p style="color:#4b5563;font-size:12px;margin:0 0 4px;">Still having trouble? We're here to help.</p>
-      <a href="mailto:hello@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">hello@holigrowth.com</a>
+      <a href="mailto:support@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">support@holigrowth.com</a>
       <p style="color:#374151;font-size:11px;margin:16px 0 0;">© ${new Date().getFullYear()} Holistic Growth LLC · All rights reserved</p>
     </div>
 
@@ -767,7 +767,7 @@ export async function sendShippedEmail(order: ZodiacOrder): Promise<void> {
     <!-- Footer -->
     <div style="text-align:center;border-top:1px solid #1e3a52;padding-top:20px;">
       <p style="color:#4b5563;font-size:12px;margin:0 0 4px;">Questions about your delivery?</p>
-      <a href="mailto:hello@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">hello@holigrowth.com</a>
+      <a href="mailto:support@holigrowth.com" style="color:#c9a84c;font-size:12px;text-decoration:none;">support@holigrowth.com</a>
       <p style="color:#374151;font-size:11px;margin:16px 0 0;">© ${new Date().getFullYear()} Holistic Growth LLC · All rights reserved</p>
     </div>
 

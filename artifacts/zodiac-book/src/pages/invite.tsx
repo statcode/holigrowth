@@ -362,8 +362,8 @@ export default function Invite() {
         <div className="text-center pb-4">
           <p className="text-white/15 text-xs">
             © {new Date().getFullYear()} Holistic Growth LLC ·{" "}
-            <a href="mailto:hello@holigrowth.com" className="hover:text-white/30 transition-colors">
-              hello@holigrowth.com
+            <a href="mailto:support@holigrowth.com" className="hover:text-white/30 transition-colors">
+              support@holigrowth.com
             </a>
           </p>
         </div>
